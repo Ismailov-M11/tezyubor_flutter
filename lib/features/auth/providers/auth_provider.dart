@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/network/api_client.dart';
@@ -79,7 +79,7 @@ class EnvironmentNotifier extends StateNotifier<AppEnvironment> {
 final authStateProvider =
     StateNotifierProvider<AuthNotifier, AuthState>((ref) => AuthNotifier());
 
-class AuthNotifier extends StateNotifier<AuthState> with ChangeNotifier {
+class AuthNotifier extends StateNotifier<AuthState> {
   AuthNotifier() : super(const AuthState()) {
     _loadFromStorage();
   }
@@ -92,7 +92,6 @@ class AuthNotifier extends StateNotifier<AuthState> with ChangeNotifier {
     if (token != null && user != null) {
       state = AuthState(token: token, user: user);
     }
-    notifyListeners();
   }
 
   Future<bool> loginPharmacy({
@@ -113,7 +112,6 @@ class AuthNotifier extends StateNotifier<AuthState> with ChangeNotifier {
       await StorageService.setString(AppConstants.userKey, user.toJsonString());
 
       state = AuthState(token: token, user: user);
-      notifyListeners();
       return true;
     } on DioException catch (e) {
       final msg = _parseError(e);
@@ -141,7 +139,6 @@ class AuthNotifier extends StateNotifier<AuthState> with ChangeNotifier {
       await StorageService.setString(AppConstants.userKey, user.toJsonString());
 
       state = AuthState(token: token, user: user);
-      notifyListeners();
       return true;
     } on DioException catch (e) {
       final msg = _parseError(e);
@@ -153,7 +150,6 @@ class AuthNotifier extends StateNotifier<AuthState> with ChangeNotifier {
   Future<void> logout() async {
     await StorageService.clear();
     state = const AuthState();
-    notifyListeners();
   }
 
   void clearError() => state = state.copyWith(clearError: true);

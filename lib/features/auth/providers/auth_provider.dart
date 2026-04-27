@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_constants.dart';
@@ -105,8 +106,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
         data: {'login': login, 'password': password},
       );
       final data = response.data as Map<String, dynamic>;
-      final token = data['token'] as String;
-      final user = AuthUser.fromJson(data['pharmacy'] as Map<String, dynamic>);
+      debugPrint('[AUTH] loginPharmacy response: $data');
+      final token = (data['token'] ?? data['accessToken'] ?? '').toString();
+      final pharmacyRaw = data['pharmacy'] ?? data['user'] ?? data;
+      final user = AuthUser.fromJson(pharmacyRaw as Map<String, dynamic>);
 
       await StorageService.setToken(token);
       await StorageService.setString(AppConstants.userKey, user.toJsonString());
@@ -131,8 +134,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
         data: {'email': email, 'password': password},
       );
       final data = response.data as Map<String, dynamic>;
-      final token = data['token'] as String;
-      final userMap = (data['admin'] ?? data['adminUser']) as Map<String, dynamic>;
+      debugPrint('[AUTH] loginAdmin response: $data');
+      final token = (data['token'] ?? data['accessToken'] ?? '').toString();
+      final userMap = (data['admin'] ?? data['adminUser'] ?? data['user'] ?? data) as Map<String, dynamic>;
       final user = AuthUser.fromJson(userMap);
 
       await StorageService.setToken(token);

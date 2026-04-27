@@ -45,7 +45,7 @@ class AnalyticsScreen extends ConsumerWidget {
 
                           // Orders by day chart
                           if (data.ordersByDay.isNotEmpty) ...[
-                            _SectionHeader(title: 'Заказы по дням'),
+                            const _SectionHeader(title: 'Заказы по дням'),
                             const SizedBox(height: 12),
                             _DailyOrdersChart(days: data.ordersByDay),
                             const SizedBox(height: 20),
@@ -53,7 +53,7 @@ class AnalyticsScreen extends ConsumerWidget {
 
                           // Orders by status
                           if (data.ordersByStatus.isNotEmpty) ...[
-                            _SectionHeader(title: 'По статусам'),
+                            const _SectionHeader(title: 'По статусам'),
                             const SizedBox(height: 12),
                             _StatusBreakdown(statusMap: data.ordersByStatus),
                             const SizedBox(height: 20),
@@ -61,7 +61,7 @@ class AnalyticsScreen extends ConsumerWidget {
 
                           // Orders by courier
                           if (data.ordersByCourier.isNotEmpty) ...[
-                            _SectionHeader(title: 'По курьерам'),
+                            const _SectionHeader(title: 'По курьерам'),
                             const SizedBox(height: 12),
                             _CourierBreakdown(courierMap: data.ordersByCourier),
                           ],

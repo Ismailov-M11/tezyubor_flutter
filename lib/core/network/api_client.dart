@@ -10,7 +10,7 @@ class ApiClient {
   ApiClient._internal() {
     _dio = Dio(
       BaseOptions(
-        baseUrl: kDebugMode ? AppConstants.devBaseUrl : AppConstants.baseUrl,
+        baseUrl: AppConstants.apiUrl,
         connectTimeout: const Duration(seconds: 20),
         receiveTimeout: const Duration(seconds: 20),
         headers: {'Content-Type': 'application/json'},

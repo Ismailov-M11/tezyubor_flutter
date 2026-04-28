@@ -1,0 +1,130 @@
+name: Flutter Android Build
+
+# ──────────────────────────────────────────────
+# Когда запускается:
+#   - при каждом push в ветку main
+#   - вручную через GitHub UI (Actions → Run workflow)
+# ──────────────────────────────────────────────
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  android:
+    name: Build Android (APK + AAB)
+    runs-on: ubuntu-latest  # Linux быстрее и дешевле для Android
+
+    steps:
+      # ── 1. Скачать код репозитория ──────────────────
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ── 2. Кеш pub зависимостей ─────────────────────
+      # Ключ основан на pubspec.lock — кеш сбрасывается
+      # только при изменении зависимостей
+      - name: Cache pub dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.pub-cache
+          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
+
+      # ── 3. Кеш Gradle ───────────────────────────────
+      # Самый долгий шаг Android-сборки — без кеша ~5 мин,
+      # с кешем ~30 сек
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      # ── 4. Установить Flutter (stable) ──────────────
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true  # кешируется сам Flutter SDK
+
+      # ── 5. Установить зависимости ───────────────────
+      - name: Install dependencies
+        run: flutter pub get
+
+      # ── 6. Анализ кода ──────────────────────────────
+      # continue-on-error: true — warnings не ломают билд,
+      # но ошибки будут видны в логах
+      - name: Analyze code
+        run: flutter analyze
+        continue-on-error: true
+
+      # ── 7. Сборка APK (release) ─────────────────────
+      # Результат: build/app/outputs/flutter-apk/app-release.apk
+      - name: Build APK
+        run: flutter build apk --release
+
+      # ── 8. Сборка AAB (release) ─────────────────────
+      # AAB нужен для загрузки в Google Play
+      # Результат: build/app/outputs/bundle/release/app-release.aab
+      - name: Build AAB
+        run: flutter build appbundle --release
+
+      # ── 9. Сохранить APK как артефакт ───────────────
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30  # хранить 30 дней
+
+      # ── 10. Сохранить AAB как артефакт ──────────────
+      - name: Upload AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-aab
+          path: build/app/outputs/bundle/release/app-release.aab
+          retention-days: 30
+
+
+# ══════════════════════════════════════════════
+# iOS СБОРКА (раскомментировать когда понадобится)
+# Требует: macOS runner + Apple Developer сертификаты
+# ══════════════════════════════════════════════
+#
+#  ios:
+#    name: Build iOS (IPA)
+#    runs-on: macos-latest
+#    # Запускать только вручную (дорогой runner)
+#    if: github.event_name == 'workflow_dispatch'
+#
+#    steps:
+#      - uses: actions/checkout@v4
+#
+#      - name: Cache pub dependencies
+#        uses: actions/cache@v4
+#        with:
+#          path: ~/.pub-cache
+#          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
+#
+#      - name: Setup Flutter
+#        uses: subosito/flutter-action@v2
+#        with:
+#          channel: stable
+#          cache: true
+#
+#      - name: Install dependencies
+#        run: flutter pub get
+#
+#      - name: Build iOS (no codesign — для тестирования)
+#        run: flutter build ios --release --no-codesign
+#
+#      - name: Upload IPA
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: app-release-ios
+#          path: build/ios/iphoneos/Runner.app
+#          retention-days: 14

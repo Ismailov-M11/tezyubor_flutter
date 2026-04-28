@@ -179,46 +179,38 @@ jobs:
         working-directory: ios
         run: bundle exec pod install --repo-update
 
-      # ── 8. Сборка через xcodebuild (без подписи) ────
-      # flutter build ios --no-codesign в новых версиях Flutter
-      # всё равно требует Development Team.
-      # Используем xcodebuild напрямую с CODE_SIGNING_ALLOWED=NO.
-      - name: Build iOS with xcodebuild (no codesign)
-        run: |
-          xcodebuild \
-            -workspace ios/Runner.xcworkspace \
-            -scheme Runner \
-            -configuration Release \
-            -archivePath $PWD/build/ios/Runner.xcarchive \
-            archive \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
-            DEVELOPMENT_TEAM="" \
-            -allowProvisioningUpdates 2>&1 | tail -50
-          echo "✅ Archive created"
+      # ── 8. Сборка Flutter iOS ────────────────────────
+      # Xcode собирает Runner.app успешно (~70s), но Flutter
+      # потом падает с "Development Team" ошибкой.
+      # || true — игнорируем exit code Flutter,
+      # Runner.app уже лежит в build/ios/iphoneos/
+      - name: Flutter build iOS (ignore signing error)
+        run: flutter build ios --release --no-codesign || true
 
-      # ── 9. Упаковка в IPA ───────────────────────────
+      # ── 9. Поиск и упаковка Runner.app в IPA ─────────
       - name: Package unsigned IPA
         run: |
-          echo "=== xcarchive contents ==="
-          find build/ios/Runner.xcarchive -name "*.app" -type d 2>/dev/null || true
-          ls -la build/ios/Runner.xcarchive/ 2>/dev/null || echo "xcarchive root empty?"
-          ls -la build/ios/Runner.xcarchive/Products/ 2>/dev/null || true
+          echo "=== Searching for Runner.app ==="
+          find build/ios -name "Runner.app" -type d 2>/dev/null || true
 
-          # Ищем Runner.app в любом месте xcarchive
-          APP_PATH=$(find build/ios/Runner.xcarchive -name "Runner.app" -type d | head -1)
+          # Приоритет: iphoneos → xcarchive → любой
+          APP_PATH=$(find build/ios/iphoneos -name "Runner.app" -type d 2>/dev/null | head -1)
           if [ -z "$APP_PATH" ]; then
-            echo "❌ Runner.app not found in xcarchive!"
+            APP_PATH=$(find build/ios -name "Runner.app" -type d 2>/dev/null | head -1)
+          fi
+
+          if [ -z "$APP_PATH" ]; then
+            echo "❌ Runner.app not found — Xcode build failed"
+            ls -la build/ios/ 2>/dev/null || echo "build/ios/ is empty"
             exit 1
           fi
-          echo "✅ Found Runner.app at: $APP_PATH"
 
+          echo "✅ Found Runner.app at: $APP_PATH"
           mkdir -p build/ios/ipa/Payload
           cp -r "$APP_PATH" build/ios/ipa/Payload/
           cd build/ios/ipa
-          zip -r "../../../build/ios/Runner-unsigned.ipa" Payload
-          echo "✅ IPA created at build/ios/Runner-unsigned.ipa"
+          zip -r "$OLDPWD/build/ios/Runner-unsigned.ipa" Payload
+          echo "✅ IPA packaged successfully"
 
       # ── 9. Загрузить IPA ────────────────────────────
       - name: Upload IPA artifact

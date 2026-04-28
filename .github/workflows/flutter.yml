@@ -188,16 +188,31 @@ jobs:
       # ── 9. Упаковать .app → .ipa ────────────────────
       - name: Package unsigned IPA
         run: |
-          APP=$(find build/ios -name "Runner.app" -type d | head -1)
+          echo "=== Searching for Runner.app ==="
+          find ~/Library/Developer/Xcode/DerivedData -name "Runner.app" \
+            -path "*/Release-iphoneos/*" -type d 2>/dev/null || true
+          find build -name "Runner.app" -type d 2>/dev/null || true
+
+          # The real built .app is in Xcode DerivedData, not in build/ios (1 KB stub)
+          APP=$(find ~/Library/Developer/Xcode/DerivedData \
+            -name "Runner.app" -path "*/Release-iphoneos/*" -type d \
+            2>/dev/null | head -1)
+
+          # Fallback: build directory (in case Flutter version changed behaviour)
           if [ -z "$APP" ]; then
-            echo "ERROR: Runner.app not found — Xcode build likely failed"
+            APP=$(find build -name "Runner.app" -type d 2>/dev/null | head -1)
+          fi
+
+          if [ -z "$APP" ]; then
+            echo "ERROR: Runner.app not found anywhere"
             exit 1
           fi
-          echo "Runner.app found at: $APP"
+
+          echo "Using: $APP  ($(du -sh "$APP" | cut -f1))"
           mkdir -p Payload build/ios/ipa
           cp -r "$APP" Payload/
           zip -r build/ios/ipa/Runner.ipa Payload/
-          echo "IPA created: build/ios/ipa/Runner.ipa"
+          echo "IPA: $(du -sh build/ios/ipa/Runner.ipa | cut -f1)"
 
       # ── 10. Загрузить IPA ───────────────────────────
       - name: Upload IPA artifact

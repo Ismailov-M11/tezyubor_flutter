@@ -7,6 +7,17 @@ import '../../../../shared/widgets/status_badge.dart';
 import '../../providers/admin_provider.dart';
 import '../../models/admin_models.dart';
 
+const _adminStatusOrder = [
+  'pending',
+  'awaiting_confirmation',
+  'confirmed',
+  'courier_pickup',
+  'courier_picked',
+  'courier_delivery',
+  'delivered',
+  'cancelled',
+];
+
 class AdminOrdersScreen extends ConsumerStatefulWidget {
   const AdminOrdersScreen({super.key});
 
@@ -14,17 +25,29 @@ class AdminOrdersScreen extends ConsumerStatefulWidget {
   ConsumerState<AdminOrdersScreen> createState() => _AdminOrdersScreenState();
 }
 
-class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
-  String? _selectedStatus;
-  final _statuses = [
-    null,
-    'pending',
-    'awaiting_confirmation',
-    'confirmed',
-    'courier_pickup',
-    'delivered',
-    'cancelled',
-  ];
+class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
+
+  static const _tabStatuses = ['all', ..._adminStatusOrder];
+
+  String _tabLabel(String status) {
+    if (status == 'all') return 'Все';
+    return StatusBadge.labelFor(status);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController =
+        TabController(length: _tabStatuses.length, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,47 +56,20 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Заказы'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => ref
-                .read(adminOrdersProvider.notifier)
-                .load(status: _selectedStatus),
-          ),
-        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(48),
-          child: SizedBox(
-            height: 40,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: _statuses.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
-              itemBuilder: (_, i) {
-                final s = _statuses[i];
-                final isSelected = _selectedStatus == s;
-                return FilterChip(
-                  label: Text(
-                    s == null ? 'Все' : StatusBadge.labelFor(s),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: isSelected ? Colors.white : null,
-                    ),
-                  ),
-                  selected: isSelected,
-                  onSelected: (_) {
-                    setState(() => _selectedStatus = s);
-                    ref
-                        .read(adminOrdersProvider.notifier)
-                        .load(status: _selectedStatus);
-                  },
-                  selectedColor: AppColors.primary,
-                  checkmarkColor: Colors.white,
-                  showCheckmark: false,
-                );
-              },
-            ),
+          child: TabBar(
+            controller: _tabController,
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
+            labelPadding: const EdgeInsets.symmetric(horizontal: 16),
+            labelStyle: const TextStyle(
+                fontSize: 13, fontWeight: FontWeight.w600),
+            unselectedLabelStyle: const TextStyle(fontSize: 13),
+            indicatorWeight: 2.5,
+            tabs: _tabStatuses
+                .map((s) => Tab(text: _tabLabel(s)))
+                .toList(),
           ),
         ),
       ),
@@ -82,31 +78,58 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
           : state.error != null && state.orders.isEmpty
               ? AppErrorWidget(
                   message: state.error!,
-                  onRetry: () => ref.read(adminOrdersProvider.notifier).load(),
+                  onRetry: () =>
+                      ref.read(adminOrdersProvider.notifier).load(),
                 )
-              : state.orders.isEmpty
-                  ? const EmptyState(
-                      icon: Icons.receipt_long,
-                      title: 'Нет заказов',
-                      subtitle: 'Заказы появятся после их создания',
-                    )
-                  : RefreshIndicator(
-                      onRefresh: () => ref
-                          .read(adminOrdersProvider.notifier)
-                          .load(status: _selectedStatus),
-                      color: AppColors.primary,
-                      child: ListView.separated(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: state.orders.length,
-                        separatorBuilder: (_, __) =>
-                            const SizedBox(height: 10),
-                        itemBuilder: (_, i) =>
-                            _AdminOrderCard(order: state.orders[i]),
-                      ),
-                    ),
+              : TabBarView(
+                  controller: _tabController,
+                  children: _tabStatuses.map((status) {
+                    final orders = status == 'all'
+                        ? state.orders
+                        : state.orders
+                            .where((o) => o.status == status)
+                            .toList();
+                    return _AdminTabOrderList(
+                      key: ValueKey(status),
+                      orders: orders,
+                    );
+                  }).toList(),
+                ),
     );
   }
 }
+
+// ─── Tab list ─────────────────────────────────────────────────────────────────
+
+class _AdminTabOrderList extends ConsumerWidget {
+  final List<AdminOrder> orders;
+
+  const _AdminTabOrderList({super.key, required this.orders});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (orders.isEmpty) {
+      return const EmptyState(
+        icon: Icons.receipt_long,
+        title: 'Нет заказов',
+        subtitle: 'Заказы появятся после их создания',
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: () => ref.read(adminOrdersProvider.notifier).load(),
+      color: AppColors.primary,
+      child: ListView.separated(
+        padding: const EdgeInsets.all(16),
+        itemCount: orders.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 10),
+        itemBuilder: (_, i) => _AdminOrderCard(order: orders[i]),
+      ),
+    );
+  }
+}
+
+// ─── Order card ───────────────────────────────────────────────────────────────
 
 class _AdminOrderCard extends ConsumerWidget {
   final AdminOrder order;
@@ -130,8 +153,12 @@ class _AdminOrderCard extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '#${order.token.substring(0, 8).toUpperCase()}',
-                        style: theme.textTheme.titleSmall,
+                        '#${order.token.toUpperCase()}',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontFamily: 'monospace',
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
                       ),
                       if (order.pharmacy != null)
                         Text(
@@ -147,7 +174,7 @@ class _AdminOrderCard extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 10),
-            _row(context, Icons.medication_outlined, 'Сумма',
+            _row(context, Icons.shopping_bag_outlined, 'Сумма',
                 '${order.medicinesTotal.toStringAsFixed(0)} сум'),
             if (order.customerPhone != null)
               _row(context, Icons.phone_outlined, 'Телефон',
@@ -161,7 +188,8 @@ class _AdminOrderCard extends ConsumerWidget {
               'Дата',
               _formatDate(order.createdAt),
             ),
-            if (order.status == 'pending' || order.status == 'awaiting_confirmation') ...[
+            if (order.status == 'pending' ||
+                order.status == 'awaiting_confirmation') ...[
               const SizedBox(height: 12),
               const Divider(),
               const SizedBox(height: 8),
@@ -179,9 +207,11 @@ class _AdminOrderCard extends ConsumerWidget {
                   const SizedBox(width: 8),
                   IconButton(
                     onPressed: () => _deleteOrder(context, ref),
-                    icon: const Icon(Icons.delete_outline, color: AppColors.error),
+                    icon: const Icon(Icons.delete_outline,
+                        color: AppColors.error),
                     style: IconButton.styleFrom(
-                      backgroundColor: AppColors.error.withValues(alpha: 0.1),
+                      backgroundColor:
+                          AppColors.error.withValues(alpha: 0.1),
                     ),
                   ),
                 ],
@@ -198,7 +228,9 @@ class _AdminOrderCard extends ConsumerWidget {
         padding: const EdgeInsets.only(bottom: 4),
         child: Row(
           children: [
-            Icon(icon, size: 14, color: Theme.of(ctx).colorScheme.onSurfaceVariant),
+            Icon(icon,
+                size: 14,
+                color: Theme.of(ctx).colorScheme.onSurfaceVariant),
             const SizedBox(width: 6),
             Text('$label: ', style: Theme.of(ctx).textTheme.bodySmall),
             Expanded(
@@ -225,7 +257,9 @@ class _AdminOrderCard extends ConsumerWidget {
   }
 
   Future<void> _confirmOrder(BuildContext context, WidgetRef ref) async {
-    final ok = await ref.read(adminOrdersProvider.notifier).confirmOrder(order.token);
+    final ok = await ref
+        .read(adminOrdersProvider.notifier)
+        .confirmOrder(order.token);
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(ok ? 'Заказ подтверждён' : 'Ошибка')),
@@ -246,14 +280,17 @@ class _AdminOrderCard extends ConsumerWidget {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            style:
+                TextButton.styleFrom(foregroundColor: AppColors.error),
             child: const Text('Удалить'),
           ),
         ],
       ),
     );
     if (confirmed == true && context.mounted) {
-      await ref.read(adminOrdersProvider.notifier).deleteOrder(order.id);
+      await ref
+          .read(adminOrdersProvider.notifier)
+          .deleteOrder(order.id);
     }
   }
 }

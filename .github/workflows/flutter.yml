@@ -26,10 +26,8 @@ jobs:
   android:
     name: Build Android (APK + AAB)
     runs-on: ubuntu-latest
-    # При ручном запуске — только если выбрано build_android
-    if: >
-      github.event_name == 'push' ||
-      (github.event_name == 'workflow_dispatch' && inputs.build_android)
+    # ОТКЛЮЧЕНО — убрать `if: false` чтобы включить обратно
+    if: false
 
     steps:
       # ── 1. Код ──────────────────────────────────────
@@ -179,17 +177,26 @@ jobs:
         working-directory: ios
         run: bundle exec pod install --repo-update
 
-      # ── 8. Сборка IPA (без подписи) ─────────────────
-      # flutter build ipa --no-codesign — официальный способ сборки
-      # unsigned IPA в CI без Apple Developer сертификатов.
-      # Выходной файл: build/ios/ipa/*.ipa
-      - name: Build iOS IPA (no codesign)
-        run: flutter build ipa --release --no-codesign
+      # ── 8. Сборка .app (без подписи) ────────────────
+      # flutter build ipa завершается ошибкой без provisioning profile,
+      # даже с --no-codesign (шаг экспорта архива требует team/profile).
+      # flutter build ios --no-codesign собирает только .app без экспорта.
+      - name: Build iOS app (no codesign)
+        run: flutter build ios --release --no-codesign
 
-      # ── 9. Загрузить IPA ────────────────────────────
+      # ── 9. Упаковать .app → .ipa ────────────────────
+      - name: Package unsigned IPA
+        run: |
+          mkdir -p Payload
+          cp -r build/ios/iphoneos/Runner.app Payload/
+          zip -r Runner.ipa Payload/
+          mkdir -p build/ios/ipa
+          mv Runner.ipa build/ios/ipa/
+
+      # ── 10. Загрузить IPA ───────────────────────────
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
           name: ios-ipa-${{ github.run_number }}
-          path: build/ios/ipa/*.ipa
+          path: build/ios/ipa/Runner.ipa
           retention-days: 30

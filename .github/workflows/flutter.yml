@@ -190,48 +190,47 @@ jobs:
       # ── 9. Поиск и упаковка Runner.app в IPA ─────────
       - name: Package unsigned IPA
         run: |
-          echo "=== build/ios contents ==="
-          find build/ios -name "Runner.app" -type d 2>/dev/null | while read p; do
-            echo "  $p  ($(du -sh "$p" 2>/dev/null | cut -f1))"
+          echo "=== All Runner.app locations (following symlinks) ==="
+          find -L build/ios -name "Runner.app" -type d 2>/dev/null | while read p; do
+            echo "  $p  size=$(du -sh "$p" 2>/dev/null | cut -f1)"
           done
 
-          echo "=== DerivedData search ==="
-          find ~/Library/Developer/Xcode/DerivedData -name "Runner.app" \
-            -type d -not -path "*Simulator*" 2>/dev/null | while read p; do
-            echo "  $p  ($(du -sh "$p" 2>/dev/null | cut -f1))"
-          done
+          echo "=== build/ios/Release-iphoneos/ symlink check ==="
+          ls -la build/ios/ 2>/dev/null | head -20 || true
 
-          # Ищем Runner.app: берём самый большой по размеру
+          echo "=== Flutter build output ==="
+          ls -la build/ios/Build/Products/ 2>/dev/null || echo "(no Build/Products dir)"
+          ls -la build/ios/Build/Products/Release-iphoneos/ 2>/dev/null || true
+
+          # Flutter кладёт app в build/ios/Build/Products/Release-iphoneos/
+          # build/ios/Release-iphoneos/ — это симлинк туда же
+          # Используем find -L чтобы пройти сквозь симлинки
           BEST_APP=""
           BEST_SIZE=0
           while IFS= read -r path; do
             size=$(du -sk "$path" 2>/dev/null | cut -f1)
+            echo "  Candidate: $path (${size}KB)"
             if [ "${size:-0}" -gt "$BEST_SIZE" ]; then
               BEST_SIZE="$size"
               BEST_APP="$path"
             fi
-          done < <(find build/ios ~/Library/Developer/Xcode/DerivedData \
+          done < <(find -L build/ios \
                      -name "Runner.app" -type d \
-                     -not -path "*Simulator*" 2>/dev/null)
+                     -not -path "*Simulator*" \
+                     -not -path "*/ipa/*" 2>/dev/null)
 
           if [ -z "$BEST_APP" ] || [ "$BEST_SIZE" -lt 100 ]; then
-            echo "❌ No valid Runner.app found (best size: ${BEST_SIZE}KB)"
+            echo "❌ No valid Runner.app (best: ${BEST_APP} = ${BEST_SIZE}KB)"
+            echo "Full build/ios tree:"
+            find build/ios -maxdepth 4 -name "*.app" -o -name "Runner" 2>/dev/null | head -30
             exit 1
           fi
 
-          echo "✅ Using Runner.app: $BEST_APP (${BEST_SIZE}KB)"
-
-          # Проверяем бинарник
-          if file "$BEST_APP/Runner" 2>/dev/null | grep -q "Mach-O"; then
-            echo "✅ Mach-O binary verified"
-          else
-            echo "⚠️  Binary check skipped (may still be valid)"
-          fi
-
+          echo "✅ Using: $BEST_APP (${BEST_SIZE}KB)"
           mkdir -p build/ios/ipa/Payload
-          cp -r "$BEST_APP" build/ios/ipa/Payload/Runner.app
+          cp -rL "$BEST_APP" build/ios/ipa/Payload/Runner.app
           (cd build/ios/ipa && zip -r "$OLDPWD/build/ios/Runner-unsigned.ipa" Payload)
-          echo "✅ IPA size: $(du -sh build/ios/Runner-unsigned.ipa | cut -f1)"
+          echo "✅ IPA: $(du -sh build/ios/Runner-unsigned.ipa | cut -f1)"
 
       # ── 9. Загрузить IPA ────────────────────────────
       - name: Upload IPA artifact

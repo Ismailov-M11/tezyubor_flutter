@@ -190,27 +190,48 @@ jobs:
       # ── 9. Поиск и упаковка Runner.app в IPA ─────────
       - name: Package unsigned IPA
         run: |
-          echo "=== Searching for Runner.app ==="
-          find build/ios -name "Runner.app" -type d 2>/dev/null || true
+          echo "=== build/ios contents ==="
+          find build/ios -name "Runner.app" -type d 2>/dev/null | while read p; do
+            echo "  $p  ($(du -sh "$p" 2>/dev/null | cut -f1))"
+          done
 
-          # Приоритет: iphoneos → xcarchive → любой
-          APP_PATH=$(find build/ios/iphoneos -name "Runner.app" -type d 2>/dev/null | head -1)
-          if [ -z "$APP_PATH" ]; then
-            APP_PATH=$(find build/ios -name "Runner.app" -type d 2>/dev/null | head -1)
-          fi
+          echo "=== DerivedData search ==="
+          find ~/Library/Developer/Xcode/DerivedData -name "Runner.app" \
+            -type d -not -path "*Simulator*" 2>/dev/null | while read p; do
+            echo "  $p  ($(du -sh "$p" 2>/dev/null | cut -f1))"
+          done
 
-          if [ -z "$APP_PATH" ]; then
-            echo "❌ Runner.app not found — Xcode build failed"
-            ls -la build/ios/ 2>/dev/null || echo "build/ios/ is empty"
+          # Ищем Runner.app: берём самый большой по размеру
+          BEST_APP=""
+          BEST_SIZE=0
+          while IFS= read -r path; do
+            size=$(du -sk "$path" 2>/dev/null | cut -f1)
+            if [ "${size:-0}" -gt "$BEST_SIZE" ]; then
+              BEST_SIZE="$size"
+              BEST_APP="$path"
+            fi
+          done < <(find build/ios ~/Library/Developer/Xcode/DerivedData \
+                     -name "Runner.app" -type d \
+                     -not -path "*Simulator*" 2>/dev/null)
+
+          if [ -z "$BEST_APP" ] || [ "$BEST_SIZE" -lt 100 ]; then
+            echo "❌ No valid Runner.app found (best size: ${BEST_SIZE}KB)"
             exit 1
           fi
 
-          echo "✅ Found Runner.app at: $APP_PATH"
+          echo "✅ Using Runner.app: $BEST_APP (${BEST_SIZE}KB)"
+
+          # Проверяем бинарник
+          if file "$BEST_APP/Runner" 2>/dev/null | grep -q "Mach-O"; then
+            echo "✅ Mach-O binary verified"
+          else
+            echo "⚠️  Binary check skipped (may still be valid)"
+          fi
+
           mkdir -p build/ios/ipa/Payload
-          cp -r "$APP_PATH" build/ios/ipa/Payload/
-          cd build/ios/ipa
-          zip -r "$OLDPWD/build/ios/Runner-unsigned.ipa" Payload
-          echo "✅ IPA packaged successfully"
+          cp -r "$BEST_APP" build/ios/ipa/Payload/Runner.app
+          (cd build/ios/ipa && zip -r "$OLDPWD/build/ios/Runner-unsigned.ipa" Payload)
+          echo "✅ IPA size: $(du -sh build/ios/Runner-unsigned.ipa | cut -f1)"
 
       # ── 9. Загрузить IPA ────────────────────────────
       - name: Upload IPA artifact

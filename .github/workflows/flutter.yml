@@ -188,13 +188,12 @@ jobs:
       # ── 9. Упаковать .app → .ipa ────────────────────
       - name: Package unsigned IPA
         run: |
-          APP="build/ios/iphoneos/Runner.app"
-          if [ ! -d "$APP" ]; then
+          APP=$(find build/ios -name "Runner.app" -type d | head -1)
+          if [ -z "$APP" ]; then
             echo "ERROR: Runner.app not found — Xcode build likely failed"
-            find build/ios -name "*.app" 2>/dev/null || true
             exit 1
           fi
-          echo "Runner.app found, packaging..."
+          echo "Runner.app found at: $APP"
           mkdir -p Payload build/ios/ipa
           cp -r "$APP" Payload/
           zip -r build/ios/ipa/Runner.ipa Payload/

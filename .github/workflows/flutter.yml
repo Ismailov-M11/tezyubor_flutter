@@ -179,13 +179,32 @@ jobs:
         working-directory: ios
         run: bundle exec pod install --repo-update
 
-      # ── 8. Сборка Flutter iOS ────────────────────────
-      # Xcode собирает Runner.app успешно (~70s), но Flutter
-      # потом падает с "Development Team" ошибкой.
-      # || true — игнорируем exit code Flutter,
-      # Runner.app уже лежит в build/ios/iphoneos/
-      - name: Flutter build iOS (ignore signing error)
+      # ── 8. Flutter build → генерирует App.framework + Flutter.framework
+      # Flutter компилирует Dart код в App.framework (нужен для шага 9).
+      # Xcode 16 отказывается линковать финальный Runner бинарник без подписи,
+      # поэтому игнорируем ошибку Flutter и делаем шаг 9 отдельно.
+      - name: Flutter build iOS (generate Flutter artifacts)
         run: flutter build ios --release --no-codesign || true
+
+      # ── 9. xcodebuild с ad-hoc подписью ─────────────
+      # CODE_SIGN_IDENTITY="-" = ad-hoc подпись (любой доступный сертификат).
+      # Xcode 16 требует хоть какую-то подпись чтобы слинковать бинарник.
+      # Ad-hoc не требует Apple Developer аккаунта.
+      - name: Build Runner binary (xcodebuild ad-hoc signing)
+        run: |
+          xcodebuild \
+            -workspace ios/Runner.xcworkspace \
+            -scheme Runner \
+            -sdk iphoneos \
+            -configuration Release \
+            SYMROOT="$PWD/build/ios" \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=YES \
+            CODE_SIGNING_ALLOWED=YES \
+            AD_HOC_CODE_SIGNING_ALLOWED=YES \
+            DEVELOPMENT_TEAM="" \
+            2>&1 | grep -E "error:|BUILD SUCCEEDED|BUILD FAILED|Runner.app" | tail -20
+          echo "Exit: $?"
 
       # ── 9. Поиск и упаковка Runner.app в IPA ─────────
       - name: Package unsigned IPA

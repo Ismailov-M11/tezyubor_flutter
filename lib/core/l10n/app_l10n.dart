@@ -215,6 +215,148 @@ class AppL10n {
 
   // Errors
   String get errorLoading => _t('Ошибка загрузки', 'Yuklashda xatolik', 'Loading error');
+
+  // Admin — navigation
+  String get businesses => _t('Магазины', 'Do\'konlar', 'Businesses');
+  String get activations => _t('Активации', 'Aktivatsiyalar', 'Activations');
+  String get adminSettings => _t('Настройки', 'Sozlamalar', 'Settings');
+  String get adminProfile => _t('Профиль', 'Profil', 'Profile');
+  String get roles => _t('Роли', 'Rollar', 'Roles');
+
+  // Admin — orders screen
+  String get adminOrdersTitle => _t('Заказы', 'Buyurtmalar', 'Orders');
+  String get adminOrderSum => _t('Сумма', 'Summa', 'Amount');
+  String get adminOrderDate => _t('Дата', 'Sana', 'Date');
+  String get adminOrderCourier => _t('Курьер', 'Kuryer', 'Courier');
+  String get adminOrderPharmacy => _t('Магазин', 'Do\'kon', 'Business');
+  String get adminConfirmOrder => _t('Подтвердить', 'Tasdiqlash', 'Confirm');
+  String get adminDeleteOrder => _t('Удалить заказ?', 'Buyurtmani o\'chirish?', 'Delete order?');
+  String get adminDeleteOrderMsg => _t('Это действие нельзя отменить.', 'Bu amalni qaytarib bo\'lmaydi.', 'This cannot be undone.');
+  String get adminOrderConfirmed => _t('Заказ подтверждён', 'Buyurtma tasdiqlandi', 'Order confirmed');
+  String get adminOrderDeleted => _t('Заказ удалён', 'Buyurtma o\'chirildi', 'Order deleted');
+  String get adminOrderError => _t('Ошибка', 'Xatolik', 'Error');
+  String get adminNoOrders => _t('Нет заказов', 'Buyurtmalar yo\'q', 'No orders');
+  String get adminNoOrdersSub => _t('Заказы появятся после создания', 'Buyurtmalar yaratilgandan keyin paydo bo\'ladi', 'Orders will appear after creation');
+  String get adminSearchOrders => _t('Поиск по токену, клиенту...', 'Token, mijoz bo\'yicha...', 'Search by token, client...');
+  String get adminFilterCourier => _t('Курьер', 'Kuryer', 'Courier');
+  String get adminFilterDate => _t('Дата', 'Sana', 'Date');
+  String get adminCourierAll => _t('Все курьеры', 'Barcha kuryerlar', 'All couriers');
+  String get adminStatusAll => _t('Все', 'Hammasi', 'All');
+
+  // Admin — clients screen
+  String get adminClientsTitle => _t('Клиенты', 'Mijozlar', 'Clients');
+  String get adminSearchClients => _t('Поиск по телефону или имени...', 'Telefon yoki ism...', 'Search by phone or name...');
+  String get adminClientsOrders => _t('заказов', 'buyurtma', 'orders');
+  String get adminNoClients => _t('Нет клиентов', 'Mijozlar yo\'q', 'No clients');
+  String get adminMinOrders => _t('Мин. заказов', 'Min. buyurtma', 'Min orders');
+
+  // Admin — businesses screen
+  String get adminBusinessesTitle => _t('Магазины', 'Do\'konlar', 'Businesses');
+  String get adminSearchBusiness => _t('Поиск магазина...', 'Do\'kon qidirish...', 'Search business...');
+  String get adminBusinessActive => _t('Активна', 'Faol', 'Active');
+  String get adminBusinessInactive => _t('Неактивна', 'Faol emas', 'Inactive');
+  String get adminBusinessOrders => _t('заказов', 'buyurtma', 'orders');
+  String get adminSubExpired => _t('Подписка истекла', 'Obuna tugadi', 'Subscription expired');
+  String get adminSubDays => _t('Подписка:', 'Obuna:', 'Subscription:');
+  String get adminSubDaysSuffix => _t('дн.', 'kun', 'days');
+  String get adminNoBusinesses => _t('Нет магазинов', 'Do\'konlar yo\'q', 'No businesses');
+  String get adminNoBusinessesSub => _t('Магазины появятся после регистрации', 'Do\'konlar ro\'yxatdan o\'tgandan keyin paydo bo\'ladi', 'Businesses will appear after registration');
+
+  // Admin — analytics screen
+  String get adminAnalyticsTitle => _t('Аналитика', 'Analitika', 'Analytics');
+  String get adminTotalOrders => _t('Всего заказов', 'Jami buyurtmalar', 'Total Orders');
+  String get adminActivePharmacies => _t('Активных магазинов', 'Faol do\'konlar', 'Active Businesses');
+  String get adminMedicinesAmount => _t('Сумма лекарств', 'Dorilar summasi', 'Medicines Amount');
+  String get adminDeliveryAmount => _t('Выручка доставки', 'Yetkazib berish', 'Delivery Revenue');
+  String get adminTotalRevenue => _t('Общая выручка', 'Umumiy daromad', 'Total Revenue');
+  String get adminOrdersByDay => _t('Заказы по дням (30 дней)', 'Kunlik buyurtmalar (30 kun)', 'Orders by Day (30 days)');
+  String get adminByStatus => _t('По статусам', 'Holat bo\'yicha', 'By Status');
+  String get adminByCourier => _t('По курьерам', 'Kuryer bo\'yicha', 'By Courier');
+
+  // Admin — activations screen
+  String get adminActivationsTitle => _t('Активации', 'Aktivatsiyalar', 'Activations');
+
+  // Admin — roles screen
+  String get adminRolesTitle => _t('Управление ролями', 'Rollarni boshqarish', 'Role Management');
+  String get adminRolesTab => _t('Роли', 'Rollar', 'Roles');
+  String get adminUsersTab => _t('Пользователи', 'Foydalanuvchilar', 'Users');
+  String get adminCreateRole => _t('Создать роль', 'Rol yaratish', 'Create Role');
+  String get adminEditRole => _t('Редактировать роль', 'Rolni tahrirlash', 'Edit Role');
+  String get adminDeleteRole => _t('Удалить роль?', 'Rolni o\'chirish?', 'Delete role?');
+  String get adminNoRoles => _t('Нет ролей', 'Rollar yo\'q', 'No roles');
+  String get adminNoRolesSub => _t('Создайте первую роль', 'Birinchi rolni yarating', 'Create your first role');
+  String get adminRoleName => _t('Название роли', 'Rol nomi', 'Role name');
+  String get adminRoleNameHint => _t('Например: Менеджер заказов', 'Masalan: Buyurtma menejeri', 'E.g.: Orders Manager');
+  String get adminPermissions => _t('Права доступа', 'Huquqlar', 'Permissions');
+  String get adminSelectAll => _t('Выбрать все', 'Barchasini tanlash', 'Select all');
+  String get adminClearAll => _t('Сбросить', 'Tozalash', 'Clear all');
+  String get adminSaveRole => _t('Сохранить роль', 'Rolni saqlash', 'Save Role');
+  String get adminRoleCreated => _t('Роль создана', 'Rol yaratildi', 'Role created');
+  String get adminRoleUpdated => _t('Роль обновлена', 'Rol yangilandi', 'Role updated');
+  String get adminRoleDeleted => _t('Роль удалена', 'Rol o\'chirildi', 'Role deleted');
+  String get adminRoleExists => _t('Роль с таким именем уже существует', 'Bu nomli rol mavjud', 'Role name already exists');
+  String get adminCreateUser => _t('Создать пользователя', 'Foydalanuvchi yaratish', 'Create User');
+  String get adminEditUser => _t('Редактировать', 'Tahrirlash', 'Edit');
+  String get adminDeleteUser => _t('Удалить пользователя?', 'Foydalanuvchini o\'chirish?', 'Delete user?');
+  String get adminNoUsers => _t('Нет пользователей', 'Foydalanuvchilar yo\'q', 'No users');
+  String get adminUserEmail => _t('Email', 'Email', 'Email');
+  String get adminUserRoles => _t('Роли', 'Rollar', 'Roles');
+  String get adminUserActive => _t('Активен', 'Faol', 'Active');
+  String get adminUserInactive => _t('Неактивен', 'Faol emas', 'Inactive');
+  String get adminUserCreated => _t('Пользователь создан', 'Foydalanuvchi yaratildi', 'User created');
+  String get adminUserUpdated => _t('Пользователь обновлён', 'Foydalanuvchi yangilandi', 'User updated');
+  String get adminUserDeleted => _t('Пользователь удалён', 'Foydalanuvchi o\'chirildi', 'User deleted');
+  String get adminPasswordLeaveBlank => _t('оставьте пустым, чтобы не менять', 'o\'zgartirmaslik uchun bo\'sh qoldiring', 'leave blank to keep');
+  String get adminPasswordMin => _t('Минимум 6 символов', 'Kamida 6 belgi', 'At least 6 characters');
+  String get adminEmailInUse => _t('Email уже используется', 'Email allaqachon ishlatilmoqda', 'Email already in use');
+  String get adminActiveAccount => _t('Активный аккаунт', 'Faol akkaunt', 'Active account');
+  String get adminNoAvailableRoles => _t('Нет доступных ролей', 'Rollar mavjud emas', 'No roles available');
+  String get adminSelectedPermissions => _t('Выбрано прав', 'Tanlangan huquqlar', 'Permissions selected');
+
+  // Admin — settings/profile screen
+  String get adminProfileTitle => _t('Профиль', 'Profil', 'Profile');
+  String get adminSettingsTitle => _t('Настройки', 'Sozlamalar', 'Settings');
+  String get adminProfileInfo => _t('Информация', 'Ma\'lumot', 'Information');
+  String get adminProfileName => _t('Имя', 'Ism', 'Name');
+  String get adminProfileEmail => _t('Email', 'Email', 'Email');
+  String get adminProfileRole => _t('Тип', 'Tur', 'Type');
+  String get adminSuperAdmin => _t('Супер администратор', 'Super administrator', 'Super Admin');
+  String get adminRegularUser => _t('Пользователь', 'Foydalanuvchi', 'User');
+  String get adminProfilePermissionsSection => _t('Мои права доступа', 'Mening huquqlarim', 'My Permissions');
+  String get adminRoleManagementSection => _t('Управление ролями и пользователями', 'Rollar va foydalanuvchilarni boshqarish', 'Role & User Management');
+  String get adminGoToRoles => _t('Роли и пользователи', 'Rollar va foydalanuvchilar', 'Roles & Users');
+  String get adminAppearanceSection => _t('Внешний вид', 'Ko\'rinish', 'Appearance');
+  String get adminLogoutConfirm => _t('Выйти из аккаунта?', 'Hisobdan chiqasizmi?', 'Log out?');
+
+  // Permissions labels
+  String get permOrdersView => _t('Просмотр заказов', 'Buyurtmalarni ko\'rish', 'View orders');
+  String get permOrdersCreate => _t('Создание заказов', 'Buyurtma yaratish', 'Create orders');
+  String get permOrdersConfirm => _t('Подтверждение заказов', 'Buyurtmani tasdiqlash', 'Confirm orders');
+  String get permOrdersCancel => _t('Отмена заказов', 'Buyurtmani bekor qilish', 'Cancel orders');
+  String get permOrdersDelete => _t('Удаление заказов', 'Buyurtmani o\'chirish', 'Delete orders');
+  String get permPharmaciesView => _t('Просмотр магазинов', 'Do\'konlarni ko\'rish', 'View businesses');
+  String get permPharmaciesCreate => _t('Создание магазинов', 'Do\'kon yaratish', 'Create businesses');
+  String get permPharmaciesEdit => _t('Редактирование магазинов', 'Do\'konni tahrirlash', 'Edit businesses');
+  String get permPharmaciesDelete => _t('Удаление магазинов', 'Do\'konni o\'chirish', 'Delete businesses');
+  String get permClientsView => _t('Просмотр клиентов', 'Mijozlarni ko\'rish', 'View clients');
+  String get permAnalyticsView => _t('Просмотр аналитики', 'Analitikani ko\'rish', 'View analytics');
+  String get permActivationsView => _t('Просмотр активаций', 'Aktivatsiyalarni ko\'rish', 'View activations');
+
+  String permissionLabel(String perm) => switch (perm) {
+    'orders:view'       => permOrdersView,
+    'orders:create'     => permOrdersCreate,
+    'orders:confirm'    => permOrdersConfirm,
+    'orders:cancel'     => permOrdersCancel,
+    'orders:delete'     => permOrdersDelete,
+    'pharmacies:view'   => permPharmaciesView,
+    'pharmacies:create' => permPharmaciesCreate,
+    'pharmacies:edit'   => permPharmaciesEdit,
+    'pharmacies:delete' => permPharmaciesDelete,
+    'clients:view'      => permClientsView,
+    'analytics:view'    => permAnalyticsView,
+    'activations:view'  => permActivationsView,
+    _                   => perm,
+  };
 }
 
 extension AppL10nContext on BuildContext {

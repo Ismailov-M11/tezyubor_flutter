@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/l10n/app_l10n.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/loading_overlay.dart';
 import '../../models/admin_models.dart';
@@ -24,11 +25,12 @@ class _BusinessesScreenState extends ConsumerState<BusinessesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final state = ref.watch(adminPharmaciesProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Магазины'),
+        title: Text(l10n.adminBusinessesTitle),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -42,7 +44,7 @@ class _BusinessesScreenState extends ConsumerState<BusinessesScreen> {
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Поиск аптеки...',
+                hintText: l10n.adminSearchBusiness,
                 prefixIcon: const Icon(Icons.search, size: 20),
                 isDense: true,
                 suffixIcon: _searchController.text.isNotEmpty
@@ -59,7 +61,9 @@ class _BusinessesScreenState extends ConsumerState<BusinessesScreen> {
               onChanged: (v) {
                 setState(() {});
                 if (v.length >= 2 || v.isEmpty) {
-                  ref.read(adminPharmaciesProvider.notifier).load(search: v);
+                  ref
+                      .read(adminPharmaciesProvider.notifier)
+                      .load(search: v.isEmpty ? null : v);
                 }
               },
             ),
@@ -75,10 +79,10 @@ class _BusinessesScreenState extends ConsumerState<BusinessesScreen> {
                       ref.read(adminPharmaciesProvider.notifier).load(),
                 )
               : state.pharmacies.isEmpty
-                  ? const EmptyState(
+                  ? EmptyState(
                       icon: Icons.storefront_outlined,
-                      title: 'Нет магазинов',
-                      subtitle: 'Магазины появятся после регистрации',
+                      title: l10n.adminNoBusinesses,
+                      subtitle: l10n.adminNoBusinessesSub,
                     )
                   : RefreshIndicator(
                       onRefresh: () =>
@@ -104,6 +108,7 @@ class _PharmacyCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final theme = Theme.of(context);
     final daysLeft = _daysLeft(pharmacy.subscriptionExpiry);
     final isExpiringSoon = daysLeft != null && daysLeft <= 14;
@@ -123,7 +128,7 @@ class _PharmacyCard extends ConsumerWidget {
                       ? AppColors.primary.withValues(alpha: 0.1)
                       : AppColors.mutedForegroundLight.withValues(alpha: 0.15),
                   child: Text(
-                    pharmacy.name[0].toUpperCase(),
+                    pharmacy.name.isNotEmpty ? pharmacy.name[0].toUpperCase() : '?',
                     style: TextStyle(
                       color: pharmacy.isActive
                           ? AppColors.primary
@@ -138,20 +143,14 @@ class _PharmacyCard extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        pharmacy.name,
-                        style: theme.textTheme.titleSmall,
-                      ),
-                      Text(
-                        pharmacy.login,
-                        style: theme.textTheme.bodySmall,
-                      ),
+                      Text(pharmacy.name, style: theme.textTheme.titleSmall),
+                      Text(pharmacy.login, style: theme.textTheme.bodySmall),
                     ],
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 3),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
                     color: pharmacy.isActive
                         ? AppColors.success.withValues(alpha: 0.1)
@@ -159,7 +158,9 @@ class _PharmacyCard extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    pharmacy.isActive ? 'Активна' : 'Неактивна',
+                    pharmacy.isActive
+                        ? l10n.adminBusinessActive
+                        : l10n.adminBusinessInactive,
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
@@ -177,10 +178,15 @@ class _PharmacyCard extends ConsumerWidget {
             if (pharmacy.address != null)
               _row(context, Icons.location_on_outlined, pharmacy.address!),
             _row(context, Icons.receipt_long_outlined,
-                '${pharmacy.ordersCount} заказов'),
+                '${pharmacy.ordersCount} ${l10n.adminBusinessOrders}'),
+            if (pharmacy.allowedCouriers != null &&
+                pharmacy.allowedCouriers!.isNotEmpty)
+              _row(context, Icons.local_shipping_outlined,
+                  pharmacy.allowedCouriers!),
             if (pharmacy.subscriptionExpiry != null) ...[
               const SizedBox(height: 8),
               _SubscriptionBar(
+                l10n: l10n,
                 expiry: pharmacy.subscriptionExpiry!,
                 daysLeft: daysLeft ?? 0,
                 isExpired: isExpired,
@@ -197,7 +203,8 @@ class _PharmacyCard extends ConsumerWidget {
         padding: const EdgeInsets.only(bottom: 3),
         child: Row(
           children: [
-            Icon(icon, size: 14,
+            Icon(icon,
+                size: 14,
                 color: Theme.of(ctx).colorScheme.onSurfaceVariant),
             const SizedBox(width: 6),
             Expanded(
@@ -220,12 +227,14 @@ class _PharmacyCard extends ConsumerWidget {
 }
 
 class _SubscriptionBar extends StatelessWidget {
+  final AppL10n l10n;
   final String expiry;
   final int daysLeft;
   final bool isExpired;
   final bool isExpiringSoon;
 
   const _SubscriptionBar({
+    required this.l10n,
     required this.expiry,
     required this.daysLeft,
     required this.isExpired,
@@ -241,8 +250,8 @@ class _SubscriptionBar extends StatelessWidget {
             : AppColors.success;
 
     final label = isExpired
-        ? 'Подписка истекла'
-        : 'Подписка: $daysLeft дн.';
+        ? l10n.adminSubExpired
+        : '${l10n.adminSubDays} $daysLeft ${l10n.adminSubDaysSuffix}';
 
     return Row(
       children: [

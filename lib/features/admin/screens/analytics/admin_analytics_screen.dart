@@ -2,7 +2,9 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/l10n/app_l10n.dart';
 import '../../../../shared/widgets/loading_overlay.dart';
+import '../../../../shared/widgets/status_badge.dart';
 import '../../providers/admin_provider.dart';
 
 class AdminAnalyticsScreen extends ConsumerWidget {
@@ -15,7 +17,7 @@ class AdminAnalyticsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Аналитика'),
+        title: Text(context.l10n.adminAnalyticsTitle),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -45,7 +47,7 @@ class AdminAnalyticsScreen extends ConsumerWidget {
                             children: [
                               Expanded(
                                 child: _KpiCard(
-                                  label: 'Всего заказов',
+                                  label: context.l10n.adminTotalOrders,
                                   value: data.totalOrders.toString(),
                                   icon: Icons.receipt_long,
                                   color: AppColors.primary,
@@ -54,8 +56,8 @@ class AdminAnalyticsScreen extends ConsumerWidget {
                               const SizedBox(width: 12),
                               Expanded(
                                 child: _KpiCard(
-                                  label: 'Аптек',
-                                  value: data.totalPharmacies.toString(),
+                                  label: context.l10n.adminActivePharmacies,
+                                  value: data.activePharmacies.toString(),
                                   icon: Icons.storefront,
                                   color: AppColors.info,
                                 ),
@@ -64,8 +66,8 @@ class AdminAnalyticsScreen extends ConsumerWidget {
                           ),
                           const SizedBox(height: 12),
                           _KpiCard(
-                            label: 'Общая выручка',
-                            value: _fmt(data.totalRevenue),
+                            label: context.l10n.adminTotalRevenue,
+                            value: _fmt(data.totalMedicinesAmount + data.totalDeliveryAmount),
                             icon: Icons.attach_money,
                             color: AppColors.success,
                             wide: true,
@@ -74,7 +76,7 @@ class AdminAnalyticsScreen extends ConsumerWidget {
 
                           // Daily chart
                           if (data.ordersByDay.isNotEmpty) ...[
-                            Text('Заказы по дням',
+                            Text(context.l10n.adminOrdersByDay,
                                 style: Theme.of(context).textTheme.titleSmall),
                             const SizedBox(height: 12),
                             _DailyChart(days: data.ordersByDay),
@@ -83,15 +85,17 @@ class AdminAnalyticsScreen extends ConsumerWidget {
 
                           // Status breakdown
                           if (data.ordersByStatus.isNotEmpty) ...[
-                            Text('По статусам',
+                            Text(context.l10n.adminByStatus,
                                 style: Theme.of(context).textTheme.titleSmall),
                             const SizedBox(height: 12),
                             _BreakdownCard(
-                              items: data.ordersByStatus.entries
+                              items: data.ordersByStatus
                                   .map((e) => _BreakdownItem(
-                                        label: _statusLabel(e.key),
-                                        count: e.value,
-                                        color: _statusColor(e.key),
+                                        label: StatusBadge.labelFor(
+                                            e['status'] as String? ?? ''),
+                                        count: (e['count'] as num?)?.toInt() ?? 0,
+                                        color: _statusColor(
+                                            e['status'] as String? ?? ''),
                                       ))
                                   .toList(),
                             ),
@@ -100,14 +104,14 @@ class AdminAnalyticsScreen extends ConsumerWidget {
 
                           // Courier breakdown
                           if (data.ordersByCourier.isNotEmpty) ...[
-                            Text('По курьерам',
+                            Text(context.l10n.adminByCourier,
                                 style: Theme.of(context).textTheme.titleSmall),
                             const SizedBox(height: 12),
                             _BreakdownCard(
-                              items: data.ordersByCourier.entries
+                              items: data.ordersByCourier
                                   .map((e) => _BreakdownItem(
-                                        label: e.key,
-                                        count: e.value,
+                                        label: (e['courier'] as String? ?? '').toUpperCase(),
+                                        count: (e['count'] as num?)?.toInt() ?? 0,
                                         color: AppColors.primary,
                                       ))
                                   .toList(),
@@ -123,14 +127,7 @@ class AdminAnalyticsScreen extends ConsumerWidget {
       ? '${(v / 1000000).toStringAsFixed(1)}M сум'
       : '${v.toStringAsFixed(0)} сум';
 
-  String _statusLabel(String s) => switch (s) {
-        'pending' => 'Ожидает',
-        'awaiting_confirmation' => 'Ожид. подтв.',
-        'confirmed' => 'Подтверждён',
-        'delivered' => 'Доставлен',
-        'cancelled' => 'Отменён',
-        _ => s,
-      };
+
 
   Color _statusColor(String s) => switch (s) {
         'pending' => AppColors.statusPending,

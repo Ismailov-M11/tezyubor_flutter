@@ -1,0 +1,406 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/constants/app_colors.dart';
+import '../../../../core/l10n/app_l10n.dart';
+import '../../../auth/providers/auth_provider.dart';
+import '../../providers/admin_provider.dart';
+import '../roles/roles_screen.dart';
+
+/// Single screen used for both SuperAdmin (Settings) and regular admin users (Profile).
+/// - SuperAdmin: shows profile info + role management section + appearance
+/// - Regular user: shows profile info + their permissions + appearance
+class AdminSettingsScreen extends ConsumerWidget {
+  const AdminSettingsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final user = ref.watch(authStateProvider).user;
+    final meState = ref.watch(adminMeProvider);
+
+    final isSuperAdmin = user?.isSuperAdmin ?? meState.isSuperAdmin;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          isSuperAdmin ? l10n.adminSettingsTitle : l10n.adminProfileTitle,
+        ),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // ── Profile info section ────────────────────────────────────────
+          _SectionCard(
+            title: l10n.adminProfileInfo,
+            children: [
+              _InfoRow(
+                icon: Icons.person_outline,
+                label: l10n.adminProfileName,
+                value: user?.name ?? '—',
+              ),
+              if (user?.email != null)
+                _InfoRow(
+                  icon: Icons.email_outlined,
+                  label: l10n.adminProfileEmail,
+                  value: user!.email!,
+                ),
+              _InfoRow(
+                icon: Icons.shield_outlined,
+                label: l10n.adminProfileRole,
+                value: isSuperAdmin
+                    ? l10n.adminSuperAdmin
+                    : l10n.adminRegularUser,
+                valueColor: isSuperAdmin ? AppColors.primary : null,
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // ── Permissions section (only for non-super-admin) ──────────────
+          if (!isSuperAdmin && meState.permissions.isNotEmpty) ...[
+            _SectionCard(
+              title: l10n.adminProfilePermissionsSection,
+              children: meState.permissions
+                  .map((perm) => _PermissionRow(
+                        permission: perm,
+                        l10n: l10n,
+                      ))
+                  .toList(),
+            ),
+            const SizedBox(height: 16),
+          ],
+
+          // ── Role management section (superadmin only) ───────────────────
+          if (isSuperAdmin) ...[
+            _SectionCard(
+              title: l10n.adminRoleManagementSection,
+              children: [
+                _NavRow(
+                  icon: Icons.manage_accounts_outlined,
+                  label: l10n.adminGoToRoles,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const RolesScreen(),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+          ],
+
+          // ── Appearance ─────────────────────────────────────────────────
+          _SectionCard(
+            title: l10n.adminAppearanceSection,
+            children: [
+              _ThemeSwitcherRow(l10n: l10n, ref: ref),
+              _LanguageRow(l10n: l10n, ref: ref),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // ── Logout ─────────────────────────────────────────────────────
+          _LogoutButton(l10n: l10n),
+          const SizedBox(height: 32),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Section Card ─────────────────────────────────────────────────────────────
+
+class _SectionCard extends StatelessWidget {
+  final String title;
+  final List<Widget> children;
+
+  const _SectionCard({required this.title, required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 8),
+          child: Text(
+            title.toUpperCase(),
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              letterSpacing: 0.8,
+            ),
+          ),
+        ),
+        Card(
+          child: Column(
+            children: children
+                .asMap()
+                .entries
+                .map((entry) {
+                  final isLast = entry.key == children.length - 1;
+                  return Column(
+                    children: [
+                      entry.value,
+                      if (!isLast)
+                        Divider(
+                          height: 1,
+                          indent: 48,
+                          color: theme.colorScheme.outline
+                              .withValues(alpha: 0.3),
+                        ),
+                    ],
+                  );
+                })
+                .toList(),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ─── Info Row ─────────────────────────────────────────────────────────────────
+
+class _InfoRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color? valueColor;
+
+  const _InfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.valueColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return ListTile(
+      dense: true,
+      leading: Icon(icon,
+          color: theme.colorScheme.onSurfaceVariant, size: 20),
+      title: Text(label,
+          style:
+              theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+      trailing: Text(
+        value,
+        style: theme.textTheme.bodyMedium?.copyWith(
+          fontWeight: FontWeight.w600,
+          color: valueColor,
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Permission Row ───────────────────────────────────────────────────────────
+
+class _PermissionRow extends StatelessWidget {
+  final String permission;
+  final AppL10n l10n;
+
+  const _PermissionRow({required this.permission, required this.l10n});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return ListTile(
+      dense: true,
+      leading: const Icon(Icons.check_circle_outline,
+          color: AppColors.success, size: 18),
+      title: Text(
+        l10n.permissionLabel(permission),
+        style: theme.textTheme.bodyMedium,
+      ),
+      subtitle: Text(
+        permission,
+        style: theme.textTheme.labelSmall
+            ?.copyWith(fontFamily: 'monospace'),
+      ),
+    );
+  }
+}
+
+// ─── Nav Row ──────────────────────────────────────────────────────────────────
+
+class _NavRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _NavRow({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: Icon(icon,
+          color: Theme.of(context).colorScheme.onSurfaceVariant, size: 20),
+      title: Text(label),
+      trailing: const Icon(Icons.chevron_right, size: 20),
+      onTap: onTap,
+    );
+  }
+}
+
+// ─── Theme switcher ───────────────────────────────────────────────────────────
+
+class _ThemeSwitcherRow extends StatelessWidget {
+  final AppL10n l10n;
+  final WidgetRef ref;
+
+  const _ThemeSwitcherRow({required this.l10n, required this.ref});
+
+  @override
+  Widget build(BuildContext context) {
+    final themeMode = ref.watch(themeModeProvider);
+    return ListTile(
+      leading: Icon(
+        themeMode == ThemeMode.dark
+            ? Icons.dark_mode_outlined
+            : Icons.light_mode_outlined,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+        size: 20,
+      ),
+      title: Text(l10n.theme),
+      trailing: Text(
+        switch (themeMode) {
+          ThemeMode.dark => l10n.themeDark,
+          ThemeMode.light => l10n.themeLight,
+          _ => l10n.themeSystem,
+        },
+        style: const TextStyle(
+          color: AppColors.primary,
+          fontWeight: FontWeight.w600,
+          fontSize: 13,
+        ),
+      ),
+      onTap: () => ref.read(themeModeProvider.notifier).toggle(),
+    );
+  }
+}
+
+// ─── Language row ─────────────────────────────────────────────────────────────
+
+class _LanguageRow extends StatelessWidget {
+  final AppL10n l10n;
+  final WidgetRef ref;
+
+  const _LanguageRow({required this.l10n, required this.ref});
+
+  @override
+  Widget build(BuildContext context) {
+    final locale = ref.watch(localeProvider);
+    return ListTile(
+      leading: Icon(Icons.language_outlined,
+          color: Theme.of(context).colorScheme.onSurfaceVariant, size: 20),
+      title: Text(l10n.language),
+      trailing: Text(
+        locale.languageCode.toUpperCase(),
+        style: const TextStyle(
+          color: AppColors.primary,
+          fontWeight: FontWeight.w600,
+          fontSize: 13,
+        ),
+      ),
+      onTap: () => _showLanguageSheet(context, ref),
+    );
+  }
+
+  void _showLanguageSheet(BuildContext context, WidgetRef ref) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 12),
+            for (final entry in const [
+              ('ru', 'Русский'),
+              ('uz', "O'zbek"),
+              ('en', 'English'),
+            ])
+              ListTile(
+                title: Text(entry.$2),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  ref
+                      .read(localeProvider.notifier)
+                      .setLocale(Locale(entry.$1));
+                },
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Logout button ────────────────────────────────────────────────────────────
+
+class _LogoutButton extends ConsumerWidget {
+  final AppL10n l10n;
+
+  const _LogoutButton({required this.l10n});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: () => _confirmLogout(context, ref),
+        icon: const Icon(Icons.logout, color: AppColors.error),
+        label: Text(
+          l10n.logout,
+          style: const TextStyle(color: AppColors.error),
+        ),
+        style: OutlinedButton.styleFrom(
+          side: const BorderSide(color: AppColors.error),
+          minimumSize: const Size(double.infinity, 48),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
+    final l10n = context.l10n;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.adminLogoutConfirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            child: Text(l10n.logout),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && context.mounted) {
+      await ref.read(authStateProvider.notifier).logout();
+    }
+  }
+}

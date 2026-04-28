@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/l10n/app_l10n.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/loading_overlay.dart';
 import '../../providers/admin_provider.dart';
@@ -10,11 +11,12 @@ class ActivationsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final state = ref.watch(adminActivationsProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Активации'),
+        title: Text(l10n.adminActivationsTitle),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -32,10 +34,9 @@ class ActivationsScreen extends ConsumerWidget {
                       ref.read(adminActivationsProvider.notifier).load(),
                 )
               : state.activations.isEmpty
-                  ? const EmptyState(
+                  ? EmptyState(
                       icon: Icons.how_to_reg_outlined,
-                      title: 'Нет активаций',
-                      subtitle: 'Активации появятся после регистрации магазинов',
+                      title: l10n.adminActivationsTitle,
                     )
                   : RefreshIndicator(
                       onRefresh: () =>
@@ -77,7 +78,7 @@ class ActivationsScreen extends ConsumerWidget {
                                 children: [
                                   if (a.createdByName != null)
                                     Text(
-                                      'Создал: ${a.createdByName}',
+                                      '${l10n.adminProfileRole}: ${a.createdByName}',
                                       style: Theme.of(context)
                                           .textTheme
                                           .bodySmall,
@@ -100,7 +101,7 @@ class ActivationsScreen extends ConsumerWidget {
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
-                                  a.isActive ? 'Активна' : 'Неактивна',
+                                  a.isActive ? l10n.adminBusinessActive : l10n.adminBusinessInactive,
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,

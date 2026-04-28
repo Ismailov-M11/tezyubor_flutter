@@ -3,46 +3,155 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
 import '../models/admin_models.dart';
 
-List<T> _parseList<T>(
-  dynamic responseData,
-  T Function(Map<String, dynamic>) fromJson,
-) {
-  final body = responseData as Map<String, dynamic>;
-  final raw = (body['data'] is List ? body['data'] : []) as List;
-  return raw.map((e) => fromJson(e as Map<String, dynamic>)).toList();
-}
-
-Map<String, dynamic> _parseObject(dynamic responseData) {
-  final body = responseData as Map<String, dynamic>;
-  return (body['data'] ?? body) as Map<String, dynamic>;
-}
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 String _dioError(DioException e) =>
     e.response?.data?['message'] as String? ?? 'Ошибка загрузки';
 
+// ─── Admin Me (permissions) ────────────────────────────────────────────────────
+
+class AdminMeState {
+  final bool isSuperAdmin;
+  final List<String> permissions;
+  final bool isLoading;
+
+  const AdminMeState({
+    this.isSuperAdmin = false,
+    this.permissions = const [],
+    this.isLoading = false,
+  });
+
+  AdminMeState copyWith({
+    bool? isSuperAdmin,
+    List<String>? permissions,
+    bool? isLoading,
+  }) =>
+      AdminMeState(
+        isSuperAdmin: isSuperAdmin ?? this.isSuperAdmin,
+        permissions: permissions ?? this.permissions,
+        isLoading: isLoading ?? this.isLoading,
+      );
+}
+
+class AdminMeNotifier extends StateNotifier<AdminMeState> {
+  AdminMeNotifier() : super(const AdminMeState()) {
+    load();
+  }
+
+  Future<void> load() async {
+    state = state.copyWith(isLoading: true);
+    try {
+      final response = await ApiClient.instance.get('/admin/me');
+      final data = (response.data as Map<String, dynamic>)['data']
+          as Map<String, dynamic>;
+      final isSuperAdmin = data['isSuperAdmin'] as bool? ?? false;
+      final perms = isSuperAdmin
+          ? <String>[]
+          : (data['permissions'] as List?)
+                  ?.map((e) => e.toString())
+                  .toList() ??
+              [];
+      state = AdminMeState(
+        isSuperAdmin: isSuperAdmin,
+        permissions: perms,
+        isLoading: false,
+      );
+    } catch (_) {
+      state = state.copyWith(isLoading: false);
+    }
+  }
+}
+
+final adminMeProvider =
+    StateNotifierProvider<AdminMeNotifier, AdminMeState>(
+  (ref) => AdminMeNotifier(),
+);
+
 // ─── Admin Orders ─────────────────────────────────────────────────────────────
+
+class AdminOrdersFilter {
+  final String? search;
+  final String? status;
+  final String? courier;
+  final DateTime? dateFrom;
+  final DateTime? dateTo;
+  final int page;
+  final int limit;
+
+  const AdminOrdersFilter({
+    this.search,
+    this.status,
+    this.courier,
+    this.dateFrom,
+    this.dateTo,
+    this.page = 1,
+    this.limit = 30,
+  });
+
+  AdminOrdersFilter copyWith({
+    String? search,
+    String? status,
+    String? courier,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    int? page,
+    int? limit,
+    bool clearSearch = false,
+    bool clearStatus = false,
+    bool clearCourier = false,
+    bool clearDates = false,
+  }) =>
+      AdminOrdersFilter(
+        search: clearSearch ? null : search ?? this.search,
+        status: clearStatus ? null : status ?? this.status,
+        courier: clearCourier ? null : courier ?? this.courier,
+        dateFrom: clearDates ? null : dateFrom ?? this.dateFrom,
+        dateTo: clearDates ? null : dateTo ?? this.dateTo,
+        page: page ?? this.page,
+        limit: limit ?? this.limit,
+      );
+
+  bool get isActive =>
+      (search != null && search!.isNotEmpty) ||
+      (status != null && status!.isNotEmpty) ||
+      (courier != null && courier!.isNotEmpty) ||
+      dateFrom != null ||
+      dateTo != null;
+}
 
 class AdminOrdersState {
   final List<AdminOrder> orders;
   final bool isLoading;
   final String? error;
+  final AdminOrdersFilter filter;
+  final int total;
+  final int pages;
 
   const AdminOrdersState({
     this.orders = const [],
     this.isLoading = false,
     this.error,
+    this.filter = const AdminOrdersFilter(),
+    this.total = 0,
+    this.pages = 1,
   });
 
   AdminOrdersState copyWith({
     List<AdminOrder>? orders,
     bool? isLoading,
     String? error,
+    AdminOrdersFilter? filter,
+    int? total,
+    int? pages,
     bool clearError = false,
   }) =>
       AdminOrdersState(
         orders: orders ?? this.orders,
         isLoading: isLoading ?? this.isLoading,
         error: clearError ? null : error ?? this.error,
+        filter: filter ?? this.filter,
+        total: total ?? this.total,
+        pages: pages ?? this.pages,
       );
 }
 
@@ -51,31 +160,56 @@ class AdminOrdersNotifier extends StateNotifier<AdminOrdersState> {
     load();
   }
 
-  Future<void> load({
-    String? status,
-    String? pharmacyId,
-    String? from,
-    String? to,
-  }) async {
-    state = state.copyWith(isLoading: true, clearError: true);
+  Future<void> load({AdminOrdersFilter? filter}) async {
+    final f = filter ?? state.filter;
+    state = state.copyWith(isLoading: true, clearError: true, filter: f);
     try {
-      final response = await ApiClient.instance.get(
-        '/admin/orders',
-        params: {
-          if (status != null) 'status': status,
-          if (pharmacyId != null) 'pharmacyId': pharmacyId,
-          if (from != null) 'from': from,
-          if (to != null) 'to': to,
-        },
+      final params = <String, dynamic>{
+        'page': f.page,
+        'limit': f.limit,
+      };
+      if (f.search != null && f.search!.isNotEmpty) {
+        params['search'] = f.search;
+      }
+      if (f.status != null && f.status!.isNotEmpty) {
+        params['status'] = f.status;
+      }
+      if (f.courier != null && f.courier!.isNotEmpty) {
+        params['courier'] = f.courier;
+      }
+      if (f.dateFrom != null) {
+        params['dateFrom'] = f.dateFrom!.toIso8601String().split('T')[0];
+      }
+      if (f.dateTo != null) {
+        params['dateTo'] = f.dateTo!.toIso8601String().split('T')[0];
+      }
+
+      final response =
+          await ApiClient.instance.get('/admin/orders', params: params);
+      final body = response.data as Map<String, dynamic>;
+      final data = (body['data'] ?? body) as Map<String, dynamic>;
+      final rawList =
+          (data['orders'] ?? data['data'] ?? []) as List;
+      final orders = rawList
+          .map((e) => AdminOrder.fromJson(e as Map<String, dynamic>))
+          .toList();
+      state = state.copyWith(
+        orders: orders,
+        isLoading: false,
+        total: (data['total'] as num?)?.toInt() ?? orders.length,
+        pages: (data['pages'] as num?)?.toInt() ?? 1,
       );
-      final list = _parseList(response.data, AdminOrder.fromJson);
-      state = state.copyWith(orders: list, isLoading: false);
     } on DioException catch (e) {
       state = state.copyWith(isLoading: false, error: _dioError(e));
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
+
+  Future<void> applyFilter(AdminOrdersFilter filter) =>
+      load(filter: filter.copyWith(page: 1));
+
+  Future<void> clearFilter() => load(filter: const AdminOrdersFilter());
 
   Future<bool> confirmOrder(String token) async {
     try {
@@ -145,14 +279,22 @@ class AdminPharmaciesNotifier extends StateNotifier<AdminPharmaciesState> {
     load();
   }
 
-  Future<void> load({String? search}) async {
+  Future<void> load({String? search, String? isActive, String? courier}) async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      final response = await ApiClient.instance.get(
-        '/admin/pharmacies',
-        params: {if (search != null && search.isNotEmpty) 'search': search},
-      );
-      final list = _parseList(response.data, AdminPharmacy.fromJson);
+      final params = <String, dynamic>{};
+      if (search != null && search.isNotEmpty) params['search'] = search;
+      if (isActive != null) params['isActive'] = isActive;
+      if (courier != null && courier.isNotEmpty) params['courier'] = courier;
+
+      final response = await ApiClient.instance
+          .get('/admin/pharmacies', params: params.isEmpty ? null : params);
+      final body = response.data as Map<String, dynamic>;
+      final data = (body['data'] ?? body) as Map<String, dynamic>;
+      final rawList = (data['pharmacies'] ?? data['data'] ?? []) as List;
+      final list = rawList
+          .map((e) => AdminPharmacy.fromJson(e as Map<String, dynamic>))
+          .toList();
       state = state.copyWith(pharmacies: list, isLoading: false);
     } on DioException catch (e) {
       state = state.copyWith(isLoading: false, error: _dioError(e));
@@ -209,7 +351,9 @@ class AdminAnalyticsNotifier extends StateNotifier<AdminAnalyticsState> {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       final response = await ApiClient.instance.get('/admin/analytics');
-      final analytics = AdminAnalytics.fromJson(_parseObject(response.data));
+      final body = response.data as Map<String, dynamic>;
+      final data = (body['data'] ?? body) as Map<String, dynamic>;
+      final analytics = AdminAnalytics.fromJson(data);
       state = state.copyWith(data: analytics, isLoading: false);
     } on DioException catch (e) {
       state = state.copyWith(isLoading: false, error: _dioError(e));
@@ -226,27 +370,71 @@ final adminAnalyticsProvider =
 
 // ─── Admin Clients ────────────────────────────────────────────────────────────
 
+class AdminClientsFilter {
+  final String? search;
+  final DateTime? dateFrom;
+  final DateTime? dateTo;
+  final int? minOrders;
+  final String? pharmacyId;
+
+  const AdminClientsFilter({
+    this.search,
+    this.dateFrom,
+    this.dateTo,
+    this.minOrders,
+    this.pharmacyId,
+  });
+
+  AdminClientsFilter copyWith({
+    String? search,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    int? minOrders,
+    String? pharmacyId,
+    bool clearSearch = false,
+    bool clearDates = false,
+    bool clearMinOrders = false,
+  }) =>
+      AdminClientsFilter(
+        search: clearSearch ? null : search ?? this.search,
+        dateFrom: clearDates ? null : dateFrom ?? this.dateFrom,
+        dateTo: clearDates ? null : dateTo ?? this.dateTo,
+        minOrders: clearMinOrders ? null : minOrders ?? this.minOrders,
+        pharmacyId: pharmacyId ?? this.pharmacyId,
+      );
+
+  bool get isActive =>
+      (search != null && search!.isNotEmpty) ||
+      dateFrom != null ||
+      dateTo != null ||
+      (minOrders != null && minOrders! > 0);
+}
+
 class AdminClientsState {
   final List<AdminClient> clients;
   final bool isLoading;
   final String? error;
+  final AdminClientsFilter filter;
 
   const AdminClientsState({
     this.clients = const [],
     this.isLoading = false,
     this.error,
+    this.filter = const AdminClientsFilter(),
   });
 
   AdminClientsState copyWith({
     List<AdminClient>? clients,
     bool? isLoading,
     String? error,
+    AdminClientsFilter? filter,
     bool clearError = false,
   }) =>
       AdminClientsState(
         clients: clients ?? this.clients,
         isLoading: isLoading ?? this.isLoading,
         error: clearError ? null : error ?? this.error,
+        filter: filter ?? this.filter,
       );
 }
 
@@ -255,14 +443,35 @@ class AdminClientsNotifier extends StateNotifier<AdminClientsState> {
     load();
   }
 
-  Future<void> load({String? search}) async {
-    state = state.copyWith(isLoading: true, clearError: true);
+  Future<void> load({AdminClientsFilter? filter}) async {
+    final f = filter ?? state.filter;
+    state = state.copyWith(isLoading: true, clearError: true, filter: f);
     try {
-      final response = await ApiClient.instance.get(
-        '/admin/clients',
-        params: {if (search != null && search.isNotEmpty) 'search': search},
-      );
-      final list = _parseList(response.data, AdminClient.fromJson);
+      final params = <String, dynamic>{};
+      if (f.search != null && f.search!.isNotEmpty) {
+        params['search'] = f.search;
+      }
+      if (f.dateFrom != null) {
+        params['dateFrom'] = f.dateFrom!.toIso8601String().split('T')[0];
+      }
+      if (f.dateTo != null) {
+        params['dateTo'] = f.dateTo!.toIso8601String().split('T')[0];
+      }
+      if (f.minOrders != null && f.minOrders! > 0) {
+        params['minOrders'] = f.minOrders;
+      }
+      if (f.pharmacyId != null) {
+        params['pharmacyId'] = f.pharmacyId;
+      }
+
+      final response = await ApiClient.instance.get('/admin/clients',
+          params: params.isEmpty ? null : params);
+      final body = response.data as Map<String, dynamic>;
+      final data = (body['data'] ?? body) as Map<String, dynamic>;
+      final rawList = (data['clients'] ?? data['data'] ?? []) as List;
+      final list = rawList
+          .map((e) => AdminClient.fromJson(e as Map<String, dynamic>))
+          .toList();
       state = state.copyWith(clients: list, isLoading: false);
     } on DioException catch (e) {
       state = state.copyWith(isLoading: false, error: _dioError(e));
@@ -270,6 +479,9 @@ class AdminClientsNotifier extends StateNotifier<AdminClientsState> {
       state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
+
+  Future<void> applyFilter(AdminClientsFilter filter) => load(filter: filter);
+  Future<void> clearFilter() => load(filter: const AdminClientsFilter());
 }
 
 final adminClientsProvider =
@@ -312,7 +524,14 @@ class AdminActivationsNotifier extends StateNotifier<AdminActivationsState> {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       final response = await ApiClient.instance.get('/admin/activations');
-      final list = _parseList(response.data, AdminActivation.fromJson);
+      final body = response.data as Map<String, dynamic>;
+      final data = (body['data'] ?? body) as Map<String, dynamic>;
+      final rawList =
+          (data['pharmacies'] ?? data['activations'] ?? data['data'] ?? [])
+              as List;
+      final list = rawList
+          .map((e) => AdminActivation.fromJson(e as Map<String, dynamic>))
+          .toList();
       state = state.copyWith(activations: list, isLoading: false);
     } on DioException catch (e) {
       state = state.copyWith(isLoading: false, error: _dioError(e));
@@ -362,7 +581,12 @@ class AdminRolesNotifier extends StateNotifier<AdminRolesState> {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       final response = await ApiClient.instance.get('/admin/roles');
-      final list = _parseList(response.data, AdminRole.fromJson);
+      final body = response.data as Map<String, dynamic>;
+      final data = (body['data'] ?? body) as Map<String, dynamic>;
+      final rawList = (data['roles'] ?? data['data'] ?? []) as List;
+      final list = rawList
+          .map((e) => AdminRole.fromJson(e as Map<String, dynamic>))
+          .toList();
       state = state.copyWith(roles: list, isLoading: false);
     } on DioException catch (e) {
       state = state.copyWith(isLoading: false, error: _dioError(e));
@@ -371,11 +595,37 @@ class AdminRolesNotifier extends StateNotifier<AdminRolesState> {
     }
   }
 
+  Future<bool> create(String name, List<String> permissions) async {
+    try {
+      await ApiClient.instance.post('/admin/roles',
+          data: {'name': name, 'permissions': permissions});
+      await load();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> update(String id,
+      {String? name, List<String>? permissions, bool? isActive}) async {
+    try {
+      final data = <String, dynamic>{};
+      if (name != null) data['name'] = name;
+      if (permissions != null) data['permissions'] = permissions;
+      if (isActive != null) data['isActive'] = isActive;
+      await ApiClient.instance.put('/admin/roles/$id', data: data);
+      await load();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<bool> delete(String id) async {
     try {
       await ApiClient.instance.delete('/admin/roles/$id');
-      state =
-          state.copyWith(roles: state.roles.where((r) => r.id != id).toList());
+      state = state.copyWith(
+          roles: state.roles.where((r) => r.id != id).toList());
       return true;
     } catch (_) {
       return false;
@@ -386,4 +636,115 @@ class AdminRolesNotifier extends StateNotifier<AdminRolesState> {
 final adminRolesProvider =
     StateNotifierProvider<AdminRolesNotifier, AdminRolesState>(
   (ref) => AdminRolesNotifier(),
+);
+
+// ─── Admin Users ──────────────────────────────────────────────────────────────
+
+class AdminUsersState {
+  final List<AdminUser> users;
+  final bool isLoading;
+  final String? error;
+
+  const AdminUsersState({
+    this.users = const [],
+    this.isLoading = false,
+    this.error,
+  });
+
+  AdminUsersState copyWith({
+    List<AdminUser>? users,
+    bool? isLoading,
+    String? error,
+    bool clearError = false,
+  }) =>
+      AdminUsersState(
+        users: users ?? this.users,
+        isLoading: isLoading ?? this.isLoading,
+        error: clearError ? null : error ?? this.error,
+      );
+}
+
+class AdminUsersNotifier extends StateNotifier<AdminUsersState> {
+  AdminUsersNotifier() : super(const AdminUsersState()) {
+    load();
+  }
+
+  Future<void> load() async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      final response = await ApiClient.instance.get('/admin/users');
+      final body = response.data as Map<String, dynamic>;
+      final data = (body['data'] ?? body) as Map<String, dynamic>;
+      final rawList = (data['users'] ?? data['data'] ?? []) as List;
+      final list = rawList
+          .map((e) => AdminUser.fromJson(e as Map<String, dynamic>))
+          .toList();
+      state = state.copyWith(users: list, isLoading: false);
+    } on DioException catch (e) {
+      state = state.copyWith(isLoading: false, error: _dioError(e));
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+    }
+  }
+
+  Future<bool> create({
+    required String name,
+    required String email,
+    required String password,
+    required List<String> roleIds,
+    bool isActive = true,
+  }) async {
+    try {
+      await ApiClient.instance.post('/admin/users', data: {
+        'name': name,
+        'email': email,
+        'password': password,
+        'roleIds': roleIds,
+        'isActive': isActive,
+      });
+      await load();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> update(
+    String id, {
+    String? name,
+    String? email,
+    String? password,
+    List<String>? roleIds,
+    bool? isActive,
+  }) async {
+    try {
+      final data = <String, dynamic>{};
+      if (name != null) data['name'] = name;
+      if (email != null) data['email'] = email;
+      if (password != null && password.isNotEmpty) data['password'] = password;
+      if (roleIds != null) data['roleIds'] = roleIds;
+      if (isActive != null) data['isActive'] = isActive;
+      await ApiClient.instance.put('/admin/users/$id', data: data);
+      await load();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> delete(String id) async {
+    try {
+      await ApiClient.instance.delete('/admin/users/$id');
+      state = state.copyWith(
+          users: state.users.where((u) => u.id != id).toList());
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+}
+
+final adminUsersProvider =
+    StateNotifierProvider<AdminUsersNotifier, AdminUsersState>(
+  (ref) => AdminUsersNotifier(),
 );

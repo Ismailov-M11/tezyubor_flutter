@@ -163,6 +163,12 @@ jobs:
         run: flutter pub get
 
       # ── 6. CocoaPods ────────────────────────────────
+      # xcodeproj 1.27.0 имеет баг: некорректно парсит PBXFileReference
+      # в build phase. Фикс — откатить xcodeproj до 1.26.0.
+      # https://github.com/CocoaPods/CocoaPods/issues/12569
+      - name: Pin xcodeproj to 1.26.0 (fix xcodeproj 1.27.0 bug)
+        run: sudo gem install xcodeproj -v 1.26.0 --no-document
+
       - name: Install CocoaPods
         working-directory: ios
         run: pod install --repo-update

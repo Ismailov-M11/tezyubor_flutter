@@ -177,38 +177,40 @@ jobs:
         working-directory: ios
         run: bundle exec pod install --repo-update
 
-      # ── 8. Сборка .app (без подписи) ────────────────
-      # Xcode build завершается успешно, но Flutter после сборки
-      # делает проверку на Development Team и падает с exit 1,
-      # даже если .app уже создан. Игнорируем exit code Flutter,
-      # проверяем наличие Runner.app вручную.
-      - name: Build iOS app (no codesign)
+      # ── 8. Flutter генерирует Dart AOT + App.framework ──
+      # flutter build завершается с ошибкой подписи, но всё нужное
+      # для xcodebuild уже скомпилировано и закешировано.
+      - name: Build iOS app (flutter, generates frameworks)
         run: flutter build ios --release --no-codesign || true
 
-      # ── 9. Упаковать .app → .ipa ────────────────────
+      # ── 9. xcodebuild без подписи → бинарник остаётся ──
+      # Второй запуск использует кеш Xcode (быстро, ~10s),
+      # CODE_SIGNING_REQUIRED=NO предотвращает удаление бинарника.
+      - name: xcodebuild without signing
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -workspace ios/Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Release \
+            -sdk iphoneos \
+            SYMROOT="$PWD/build/ios" \
+            OBJROOT="$PWD/build/ios/objs" \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            2>&1 | tail -20
+
+      # ── 10. Упаковать .app → .ipa ───────────────────
       - name: Package unsigned IPA
         run: |
-          echo "=== Searching for Runner.app ==="
-          find ~/Library/Developer/Xcode/DerivedData -name "Runner.app" \
-            -path "*/Release-iphoneos/*" -type d 2>/dev/null || true
-          find build -name "Runner.app" -type d 2>/dev/null || true
-
-          # The real built .app is in Xcode DerivedData, not in build/ios (1 KB stub)
-          APP=$(find ~/Library/Developer/Xcode/DerivedData \
-            -name "Runner.app" -path "*/Release-iphoneos/*" -type d \
-            2>/dev/null | head -1)
-
-          # Fallback: build directory (in case Flutter version changed behaviour)
-          if [ -z "$APP" ]; then
-            APP=$(find build -name "Runner.app" -type d 2>/dev/null | head -1)
-          fi
-
-          if [ -z "$APP" ]; then
-            echo "ERROR: Runner.app not found anywhere"
+          APP="build/ios/Release-iphoneos/Runner.app"
+          if [ ! -f "$APP/Runner" ]; then
+            echo "ERROR: Runner binary missing"
+            find build/ios -name "Runner" -type f 2>/dev/null | head -5
             exit 1
           fi
-
-          echo "Using: $APP  ($(du -sh "$APP" | cut -f1))"
+          echo "Found: $APP  ($(du -sh "$APP" | cut -f1))"
           mkdir -p Payload build/ios/ipa
           cp -r "$APP" Payload/
           zip -r build/ios/ipa/Runner.ipa Payload/

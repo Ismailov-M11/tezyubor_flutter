@@ -162,16 +162,22 @@ jobs:
       - name: Install Flutter dependencies
         run: flutter pub get
 
-      # ── 6. CocoaPods ────────────────────────────────
-      # xcodeproj 1.27.0 имеет баг: некорректно парсит PBXFileReference
-      # в build phase. Фикс — откатить xcodeproj до 1.26.0.
-      # https://github.com/CocoaPods/CocoaPods/issues/12569
-      - name: Pin xcodeproj to 1.26.0 (fix xcodeproj 1.27.0 bug)
-        run: sudo gem install xcodeproj -v 1.26.0 --no-document
+      # ── 6. Ruby + Bundler (фикс xcodeproj 1.27.0 баг) ──
+      # ios/Gemfile пинит xcodeproj = 1.26.0.
+      # ruby/setup-ruby автоматически запускает bundle install.
+      # После этого используем bundle exec pod install чтобы
+      # RubyGems гарантировал нужную версию xcodeproj.
+      - name: Setup Ruby with Bundler (pin xcodeproj 1.26.0)
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true       # автоматически запускает bundle install
+          working-directory: ios    # читает ios/Gemfile
 
-      - name: Install CocoaPods
+      # ── 7. CocoaPods через Bundler ───────────────────
+      - name: Install CocoaPods (bundle exec)
         working-directory: ios
-        run: pod install --repo-update
+        run: bundle exec pod install --repo-update
 
       # ── 7. Сборка Flutter (без подписи) ─────────────
       # Создаёт Runner.app в build/ios/iphoneos/

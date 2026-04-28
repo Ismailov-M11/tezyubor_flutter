@@ -2,7 +2,9 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/l10n/app_l10n.dart';
 import '../../../../shared/widgets/loading_overlay.dart';
+import '../../../../shared/widgets/status_badge.dart';
 import '../../providers/analytics_provider.dart';
 
 class AnalyticsScreen extends ConsumerWidget {
@@ -10,12 +12,13 @@ class AnalyticsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final state = ref.watch(analyticsProvider);
     final data = state.data;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Аналитика'),
+        title: Text(l10n.analytics),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -39,31 +42,29 @@ class AnalyticsScreen extends ConsumerWidget {
                       child: ListView(
                         padding: const EdgeInsets.all(16),
                         children: [
-                          // KPI cards
-                          _MetricsGrid(data: data),
+                          _MetricsGrid(data: data, l10n: l10n),
                           const SizedBox(height: 20),
 
-                          // Orders by day chart
                           if (data.ordersByDay.isNotEmpty) ...[
-                            const _SectionHeader(title: 'Заказы по дням'),
+                            _SectionHeader(title: l10n.ordersByDayLbl),
                             const SizedBox(height: 12),
                             _DailyOrdersChart(days: data.ordersByDay),
                             const SizedBox(height: 20),
                           ],
 
-                          // Orders by status
                           if (data.ordersByStatus.isNotEmpty) ...[
-                            const _SectionHeader(title: 'По статусам'),
+                            _SectionHeader(title: l10n.ordersByStatusLbl),
                             const SizedBox(height: 12),
                             _StatusBreakdown(statusMap: data.ordersByStatus),
                             const SizedBox(height: 20),
                           ],
 
-                          // Orders by courier
                           if (data.ordersByCourier.isNotEmpty) ...[
-                            const _SectionHeader(title: 'По курьерам'),
+                            _SectionHeader(title: l10n.ordersByCourierLbl),
                             const SizedBox(height: 12),
-                            _CourierBreakdown(courierMap: data.ordersByCourier),
+                            _CourierBreakdown(
+                                courierMap: data.ordersByCourier,
+                                l10n: l10n),
                           ],
                         ],
                       ),
@@ -74,33 +75,34 @@ class AnalyticsScreen extends ConsumerWidget {
 
 class _MetricsGrid extends StatelessWidget {
   final dynamic data;
+  final AppL10n l10n;
 
-  const _MetricsGrid({required this.data});
+  const _MetricsGrid({required this.data, required this.l10n});
 
   @override
   Widget build(BuildContext context) {
     final items = [
       _MetricItem(
-        label: 'Всего заказов',
+        label: l10n.totalOrdersLbl,
         value: data.totalOrders.toString(),
         icon: Icons.receipt_long,
         color: AppColors.primary,
       ),
       _MetricItem(
-        label: 'Сумма лекарств',
-        value: _fmt(data.totalMedicines),
+        label: l10n.medicinesAmountLbl,
+        value: _fmt(data.totalMedicines as double),
         icon: Icons.medication,
         color: AppColors.info,
       ),
       _MetricItem(
-        label: 'Доставка',
-        value: _fmt(data.totalDelivery),
+        label: l10n.deliveryRevenueLbl,
+        value: _fmt(data.totalDelivery as double),
         icon: Icons.delivery_dining,
         color: AppColors.success,
       ),
       _MetricItem(
-        label: 'Общая выручка',
-        value: _fmt(data.totalRevenue),
+        label: l10n.totalRevenueLbl,
+        value: _fmt(data.totalRevenue as double),
         icon: Icons.attach_money,
         color: AppColors.warning,
       ),
@@ -117,8 +119,9 @@ class _MetricsGrid extends StatelessWidget {
     );
   }
 
-  String _fmt(double v) =>
-      v >= 1000000 ? '${(v / 1000000).toStringAsFixed(1)}M' : '${v.toStringAsFixed(0)} сум';
+  String _fmt(double v) => v >= 1000000
+      ? '${(v / 1000000).toStringAsFixed(1)}M'
+      : '${v.toStringAsFixed(0)} сум';
 }
 
 class _MetricItem {
@@ -152,7 +155,7 @@ class _MetricCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: item.color.withOpacity(0.15),
+                color: item.color.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(item.icon, size: 18, color: item.color),
@@ -165,7 +168,8 @@ class _MetricCard extends StatelessWidget {
                         .textTheme
                         .titleMedium
                         ?.copyWith(fontWeight: FontWeight.bold)),
-                Text(item.label, style: Theme.of(context).textTheme.bodySmall),
+                Text(item.label,
+                    style: Theme.of(context).textTheme.bodySmall),
               ],
             ),
           ],
@@ -182,7 +186,11 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(title, style: Theme.of(context).textTheme.titleSmall);
+    return Text(title,
+        style: Theme.of(context)
+            .textTheme
+            .titleSmall
+            ?.copyWith(fontWeight: FontWeight.w600));
   }
 }
 
@@ -193,8 +201,11 @@ class _DailyOrdersChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final last14 = days.length > 14 ? days.sublist(days.length - 14) : days;
-    final maxY = last14.fold<int>(0, (m, d) => m > (d.count as int) ? m : (d.count as int)).toDouble();
+    final last14 =
+        days.length > 14 ? days.sublist(days.length - 14) : days;
+    final maxY = last14
+        .fold<int>(0, (m, d) => m > (d.count as int) ? m : (d.count as int))
+        .toDouble();
 
     return Card(
       child: Padding(
@@ -234,20 +245,31 @@ class _DailyOrdersChart extends StatelessWidget {
                     showTitles: true,
                     getTitlesWidget: (v, _) {
                       final idx = v.toInt();
-                      if (idx < 0 || idx >= last14.length) return const SizedBox();
-                      final date = (last14[idx].date as String).substring(5);
-                      return Text(date, style: const TextStyle(fontSize: 9));
+                      if (idx < 0 || idx >= last14.length) {
+                        return const SizedBox();
+                      }
+                      final date =
+                          (last14[idx].date as String).length >= 7
+                              ? (last14[idx].date as String).substring(5)
+                              : last14[idx].date as String;
+                      return Text(date,
+                          style: const TextStyle(fontSize: 9));
                     },
                   ),
                 ),
-                topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false)),
+                rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false)),
               ),
               borderData: FlBorderData(show: false),
               gridData: FlGridData(
                 drawVerticalLine: false,
                 getDrawingHorizontalLine: (_) => FlLine(
-                  color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .outline
+                      .withValues(alpha: 0.3),
                   strokeWidth: 1,
                 ),
               ),
@@ -273,30 +295,34 @@ class _StatusBreakdown extends StatelessWidget {
         child: Column(
           children: statusMap.entries.map((e) {
             final pct = total > 0 ? e.value / total : 0.0;
+            final color = StatusBadge.colorFor(e.key);
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: Row(
                 children: [
                   SizedBox(
-                    width: 120,
-                    child: Text(_statusLabel(e.key),
-                        style: Theme.of(context).textTheme.bodySmall),
+                    width: 110,
+                    child: Text(StatusBadge.labelFor(e.key),
+                        style: Theme.of(context).textTheme.bodySmall,
+                        overflow: TextOverflow.ellipsis),
                   ),
                   Expanded(
                     child: LinearProgressIndicator(
                       value: pct,
-                      backgroundColor:
-                          Theme.of(context).colorScheme.outline.withOpacity(0.2),
-                      valueColor:
-                          AlwaysStoppedAnimation(_statusColor(e.key)),
+                      backgroundColor: Theme.of(context)
+                          .colorScheme
+                          .outline
+                          .withValues(alpha: 0.2),
+                      valueColor: AlwaysStoppedAnimation(color),
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
                   const SizedBox(width: 8),
                   Text('${e.value}',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          )),
+                      style:
+                          Theme.of(context).textTheme.bodySmall?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              )),
                 ],
               ),
             );
@@ -305,30 +331,14 @@ class _StatusBreakdown extends StatelessWidget {
       ),
     );
   }
-
-  String _statusLabel(String s) => switch (s) {
-        'pending' => 'Ожидает',
-        'awaiting_confirmation' => 'Ожид. подтв.',
-        'confirmed' => 'Подтверждён',
-        'delivered' => 'Доставлен',
-        'cancelled' => 'Отменён',
-        _ => s,
-      };
-
-  Color _statusColor(String s) => switch (s) {
-        'pending' => AppColors.statusPending,
-        'awaiting_confirmation' => AppColors.statusAwaiting,
-        'confirmed' => AppColors.statusConfirmed,
-        'delivered' => AppColors.statusDelivered,
-        'cancelled' => AppColors.statusCancelled,
-        _ => AppColors.primary,
-      };
 }
 
 class _CourierBreakdown extends StatelessWidget {
   final Map<String, int> courierMap;
+  final AppL10n l10n;
 
-  const _CourierBreakdown({required this.courierMap});
+  const _CourierBreakdown(
+      {required this.courierMap, required this.l10n});
 
   @override
   Widget build(BuildContext context) {
@@ -343,14 +353,16 @@ class _CourierBreakdown extends StatelessWidget {
                 children: [
                   const Icon(Icons.local_shipping_outlined, size: 16),
                   const SizedBox(width: 8),
-                  Text(e.key, style: Theme.of(context).textTheme.bodySmall),
+                  Text(e.key,
+                      style: Theme.of(context).textTheme.bodySmall),
                   const Spacer(),
                   Text(
-                    '${e.value} заказов',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.primary,
-                        ),
+                    '${e.value} ${l10n.ordersCount}',
+                    style:
+                        Theme.of(context).textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primary,
+                            ),
                   ),
                 ],
               ),

@@ -35,7 +35,7 @@ class ActivationsScreen extends ConsumerWidget {
                   ? const EmptyState(
                       icon: Icons.how_to_reg_outlined,
                       title: 'Нет активаций',
-                      subtitle: 'Активации появятся после регистрации аптек',
+                      subtitle: 'Активации появятся после регистрации магазинов',
                     )
                   : RefreshIndicator(
                       onRefresh: () =>
@@ -52,8 +52,8 @@ class ActivationsScreen extends ConsumerWidget {
                             child: ListTile(
                               leading: CircleAvatar(
                                 backgroundColor: a.isActive
-                                    ? AppColors.success.withOpacity(0.1)
-                                    : AppColors.error.withOpacity(0.1),
+                                    ? AppColors.success.withValues(alpha: 0.1)
+                                    : AppColors.error.withValues(alpha: 0.1),
                                 child: Icon(
                                   a.isActive
                                       ? Icons.check_circle_outline
@@ -95,8 +95,8 @@ class ActivationsScreen extends ConsumerWidget {
                                     horizontal: 8, vertical: 3),
                                 decoration: BoxDecoration(
                                   color: a.isActive
-                                      ? AppColors.success.withOpacity(0.1)
-                                      : AppColors.error.withOpacity(0.1),
+                                      ? AppColors.success.withValues(alpha: 0.1)
+                                      : AppColors.error.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(

@@ -3,6 +3,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
 import '../models/admin_models.dart';
 
+List<T> _parseList<T>(
+  dynamic responseData,
+  T Function(Map<String, dynamic>) fromJson,
+) {
+  final body = responseData as Map<String, dynamic>;
+  final raw = (body['data'] is List ? body['data'] : []) as List;
+  return raw.map((e) => fromJson(e as Map<String, dynamic>)).toList();
+}
+
+Map<String, dynamic> _parseObject(dynamic responseData) {
+  final body = responseData as Map<String, dynamic>;
+  return (body['data'] ?? body) as Map<String, dynamic>;
+}
+
+String _dioError(DioException e) =>
+    e.response?.data?['message'] as String? ?? 'Ошибка загрузки';
+
 // ─── Admin Orders ─────────────────────────────────────────────────────────────
 
 class AdminOrdersState {
@@ -51,15 +68,12 @@ class AdminOrdersNotifier extends StateNotifier<AdminOrdersState> {
           if (to != null) 'to': to,
         },
       );
-      final list = (response.data as List)
-          .map((e) => AdminOrder.fromJson(e as Map<String, dynamic>))
-          .toList();
+      final list = _parseList(response.data, AdminOrder.fromJson);
       state = state.copyWith(orders: list, isLoading: false);
     } on DioException catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: e.response?.data?['message'] as String? ?? 'Ошибка загрузки',
-      );
+      state = state.copyWith(isLoading: false, error: _dioError(e));
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
 
@@ -68,7 +82,7 @@ class AdminOrdersNotifier extends StateNotifier<AdminOrdersState> {
       await ApiClient.instance.put('/admin/orders/$token/confirm');
       await load();
       return true;
-    } on DioException catch (_) {
+    } catch (_) {
       return false;
     }
   }
@@ -78,18 +92,18 @@ class AdminOrdersNotifier extends StateNotifier<AdminOrdersState> {
       await ApiClient.instance.put('/admin/orders/$token/cancel');
       await load();
       return true;
-    } on DioException catch (_) {
+    } catch (_) {
       return false;
     }
   }
 
-  Future<bool> deleteOrder(int id) async {
+  Future<bool> deleteOrder(String id) async {
     try {
       await ApiClient.instance.delete('/admin/orders/$id');
       state = state.copyWith(
           orders: state.orders.where((o) => o.id != id).toList());
       return true;
-    } on DioException catch (_) {
+    } catch (_) {
       return false;
     }
   }
@@ -138,25 +152,22 @@ class AdminPharmaciesNotifier extends StateNotifier<AdminPharmaciesState> {
         '/admin/pharmacies',
         params: {if (search != null && search.isNotEmpty) 'search': search},
       );
-      final list = (response.data as List)
-          .map((e) => AdminPharmacy.fromJson(e as Map<String, dynamic>))
-          .toList();
+      final list = _parseList(response.data, AdminPharmacy.fromJson);
       state = state.copyWith(pharmacies: list, isLoading: false);
     } on DioException catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: e.response?.data?['message'] as String? ?? 'Ошибка загрузки',
-      );
+      state = state.copyWith(isLoading: false, error: _dioError(e));
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
 
-  Future<bool> delete(int id) async {
+  Future<bool> delete(String id) async {
     try {
       await ApiClient.instance.delete('/admin/pharmacies/$id');
       state = state.copyWith(
           pharmacies: state.pharmacies.where((p) => p.id != id).toList());
       return true;
-    } on DioException catch (_) {
+    } catch (_) {
       return false;
     }
   }
@@ -198,14 +209,12 @@ class AdminAnalyticsNotifier extends StateNotifier<AdminAnalyticsState> {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       final response = await ApiClient.instance.get('/admin/analytics');
-      final analytics =
-          AdminAnalytics.fromJson(response.data as Map<String, dynamic>);
+      final analytics = AdminAnalytics.fromJson(_parseObject(response.data));
       state = state.copyWith(data: analytics, isLoading: false);
     } on DioException catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: e.response?.data?['message'] as String? ?? 'Ошибка загрузки',
-      );
+      state = state.copyWith(isLoading: false, error: _dioError(e));
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
 }
@@ -253,15 +262,12 @@ class AdminClientsNotifier extends StateNotifier<AdminClientsState> {
         '/admin/clients',
         params: {if (search != null && search.isNotEmpty) 'search': search},
       );
-      final list = (response.data as List)
-          .map((e) => AdminClient.fromJson(e as Map<String, dynamic>))
-          .toList();
+      final list = _parseList(response.data, AdminClient.fromJson);
       state = state.copyWith(clients: list, isLoading: false);
     } on DioException catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: e.response?.data?['message'] as String? ?? 'Ошибка загрузки',
-      );
+      state = state.copyWith(isLoading: false, error: _dioError(e));
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
 }
@@ -306,15 +312,12 @@ class AdminActivationsNotifier extends StateNotifier<AdminActivationsState> {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       final response = await ApiClient.instance.get('/admin/activations');
-      final list = (response.data as List)
-          .map((e) => AdminActivation.fromJson(e as Map<String, dynamic>))
-          .toList();
+      final list = _parseList(response.data, AdminActivation.fromJson);
       state = state.copyWith(activations: list, isLoading: false);
     } on DioException catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: e.response?.data?['message'] as String? ?? 'Ошибка загрузки',
-      );
+      state = state.copyWith(isLoading: false, error: _dioError(e));
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
 }
@@ -359,25 +362,22 @@ class AdminRolesNotifier extends StateNotifier<AdminRolesState> {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       final response = await ApiClient.instance.get('/admin/roles');
-      final list = (response.data as List)
-          .map((e) => AdminRole.fromJson(e as Map<String, dynamic>))
-          .toList();
+      final list = _parseList(response.data, AdminRole.fromJson);
       state = state.copyWith(roles: list, isLoading: false);
     } on DioException catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: e.response?.data?['message'] as String? ?? 'Ошибка загрузки',
-      );
+      state = state.copyWith(isLoading: false, error: _dioError(e));
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
 
-  Future<bool> delete(int id) async {
+  Future<bool> delete(String id) async {
     try {
       await ApiClient.instance.delete('/admin/roles/$id');
       state =
           state.copyWith(roles: state.roles.where((r) => r.id != id).toList());
       return true;
-    } on DioException catch (_) {
+    } catch (_) {
       return false;
     }
   }

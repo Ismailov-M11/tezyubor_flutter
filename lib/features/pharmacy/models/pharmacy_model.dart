@@ -1,5 +1,5 @@
 class PharmacyProfile {
-  final int id;
+  final String id;
   final String name;
   final String login;
   final String? email;
@@ -27,7 +27,7 @@ class PharmacyProfile {
 
   factory PharmacyProfile.fromJson(Map<String, dynamic> json) =>
       PharmacyProfile(
-        id: json['id'] as int,
+        id: json['id']?.toString() ?? '',
         name: json['name'] as String,
         login: json['login'] as String,
         email: json['email'] as String?,

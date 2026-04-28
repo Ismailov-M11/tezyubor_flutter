@@ -115,7 +115,7 @@ class _RoleCard extends ConsumerWidget {
                   icon: const Icon(Icons.delete_outline, size: 18),
                   color: AppColors.error,
                   style: IconButton.styleFrom(
-                    backgroundColor: AppColors.error.withOpacity(0.08),
+                    backgroundColor: AppColors.error.withValues(alpha: 0.08),
                     padding: const EdgeInsets.all(6),
                     minimumSize: const Size(32, 32),
                   ),
@@ -176,7 +176,7 @@ class _PermChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.1),
+        color: AppColors.primary.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(

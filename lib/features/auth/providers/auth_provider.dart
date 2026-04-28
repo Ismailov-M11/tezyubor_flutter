@@ -1,11 +1,34 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart' show ThemeMode;
+import 'package:flutter/material.dart' show Locale, ThemeMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/storage/storage_service.dart';
 import '../models/auth_models.dart';
+
+// ─── Locale ───────────────────────────────────────────────────────────────────
+
+final localeProvider = StateNotifierProvider<LocaleNotifier, Locale>(
+  (ref) => LocaleNotifier(),
+);
+
+class LocaleNotifier extends StateNotifier<Locale> {
+  LocaleNotifier() : super(_load());
+
+  static Locale _load() {
+    final saved = StorageService.getString(AppConstants.localeKey);
+    return switch (saved) {
+      'uz' => const Locale('uz'),
+      'en' => const Locale('en'),
+      _ => const Locale('ru'),
+    };
+  }
+
+  Future<void> setLocale(Locale locale) async {
+    state = locale;
+    await StorageService.setString(AppConstants.localeKey, locale.languageCode);
+  }
+}
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
 
@@ -18,9 +41,11 @@ class ThemeModeNotifier extends StateNotifier<ThemeMode> {
 
   static ThemeMode _loadTheme() {
     final saved = StorageService.getString(AppConstants.themeKey);
-    if (saved == 'dark') return ThemeMode.dark;
-    if (saved == 'light') return ThemeMode.light;
-    return ThemeMode.system;
+    return switch (saved) {
+      'dark' => ThemeMode.dark,
+      'light' => ThemeMode.light,
+      _ => ThemeMode.system,
+    };
   }
 
   void toggle() {
@@ -36,7 +61,11 @@ class ThemeModeNotifier extends StateNotifier<ThemeMode> {
     state = mode;
     StorageService.setString(
       AppConstants.themeKey,
-      mode == ThemeMode.dark ? 'dark' : 'light',
+      switch (mode) {
+        ThemeMode.dark => 'dark',
+        ThemeMode.light => 'light',
+        _ => 'system',
+      },
     );
   }
 }
@@ -105,11 +134,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
         '/auth/pharmacy/login',
         data: {'login': login, 'password': password},
       );
-      final data = response.data as Map<String, dynamic>;
-      debugPrint('[AUTH] loginPharmacy response: $data');
+      final body = response.data as Map<String, dynamic>;
+      final data = (body['data'] ?? body) as Map<String, dynamic>;
       final token = (data['token'] ?? data['accessToken'] ?? '').toString();
-      final pharmacyRaw = data['pharmacy'] ?? data['user'] ?? data;
-      final user = AuthUser.fromJson(pharmacyRaw as Map<String, dynamic>);
+      if (token.isEmpty) throw Exception('Не получен токен от сервера');
+      final userRaw = (data['user'] ?? data['pharmacy']) as Map<String, dynamic>;
+      final user = AuthUser.fromJson(userRaw);
 
       await StorageService.setToken(token);
       await StorageService.setString(AppConstants.userKey, user.toJsonString());
@@ -119,6 +149,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
     } on DioException catch (e) {
       final msg = _parseError(e);
       state = state.copyWith(isLoading: false, error: msg);
+      return false;
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
       return false;
     }
   }
@@ -133,10 +166,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
         '/auth/admin/login',
         data: {'email': email, 'password': password},
       );
-      final data = response.data as Map<String, dynamic>;
-      debugPrint('[AUTH] loginAdmin response: $data');
+      final body = response.data as Map<String, dynamic>;
+      final data = (body['data'] ?? body) as Map<String, dynamic>;
       final token = (data['token'] ?? data['accessToken'] ?? '').toString();
-      final userMap = (data['admin'] ?? data['adminUser'] ?? data['user'] ?? data) as Map<String, dynamic>;
+      if (token.isEmpty) throw Exception('Не получен токен от сервера');
+      final userMap = (data['user'] ?? data['admin'] ?? data['adminUser']) as Map<String, dynamic>;
       final user = AuthUser.fromJson(userMap);
 
       await StorageService.setToken(token);
@@ -147,6 +181,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
     } on DioException catch (e) {
       final msg = _parseError(e);
       state = state.copyWith(isLoading: false, error: msg);
+      return false;
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
       return false;
     }
   }

@@ -38,14 +38,25 @@ class AnalyticsNotifier extends StateNotifier<AnalyticsState> {
           if (to != null) 'to': to,
         },
       );
-      final analytics = PharmacyAnalytics.fromJson(
-          response.data as Map<String, dynamic>);
+      final body = response.data as Map<String, dynamic>;
+      final rawData = body['data'] ?? body;
+      final Map<String, dynamic> analyticsData;
+      if (rawData is List) {
+        analyticsData = {'ordersByDay': rawData};
+      } else if (rawData is Map) {
+        analyticsData = Map<String, dynamic>.from(rawData);
+      } else {
+        analyticsData = {};
+      }
+      final analytics = PharmacyAnalytics.fromJson(analyticsData);
       state = state.copyWith(data: analytics, isLoading: false);
     } on DioException catch (e) {
       state = state.copyWith(
         isLoading: false,
         error: e.response?.data?['message'] as String? ?? 'Ошибка загрузки',
       );
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
 }

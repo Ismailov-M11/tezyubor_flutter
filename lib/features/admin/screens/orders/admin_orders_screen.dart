@@ -181,7 +181,7 @@ class _AdminOrderCard extends ConsumerWidget {
                     onPressed: () => _deleteOrder(context, ref),
                     icon: const Icon(Icons.delete_outline, color: AppColors.error),
                     style: IconButton.styleFrom(
-                      backgroundColor: AppColors.error.withOpacity(0.1),
+                      backgroundColor: AppColors.error.withValues(alpha: 0.1),
                     ),
                   ),
                 ],

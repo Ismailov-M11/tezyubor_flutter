@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/l10n/app_l10n.dart';
 import '../../../shared/widgets/custom_button.dart';
 import '../../../shared/widgets/custom_text_field.dart';
 import '../models/auth_models.dart';
@@ -37,12 +39,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _logoTapCount = 0;
       ref.read(environmentProvider.notifier).toggle();
       final env = ref.read(environmentProvider);
-      final envName = env == AppEnvironment.admin ? 'Администратор' : 'Аптека';
+      final envName = env == AppEnvironment.admin ? 'Admin' : 'App';
       _loginController.clear();
       _passwordController.clear();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Окружение: $envName'),
+          content: Text(envName),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -80,9 +82,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final env = ref.watch(environmentProvider);
     final authState = ref.watch(authStateProvider);
-    final themeMode = ref.watch(themeModeProvider);
     final isAdmin = env == AppEnvironment.admin;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -115,88 +117,53 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   onTap: _onLogoTap,
                   child: Column(
                     children: [
-                      Container(
+                      SvgPicture.asset(
+                        'assets/images/logo.svg',
                         width: 80,
                         height: 80,
-                        decoration: BoxDecoration(
-                          color: AppColors.primary,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Icon(
-                          Icons.local_pharmacy,
-                          size: 44,
-                          color: Colors.white,
-                        ),
                       ),
                       const SizedBox(height: 12),
-                      const Text(
-                        'TezyUbor',
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
+                      RichText(
+                        text: TextSpan(
+                          style: const TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -1,
+                          ),
+                          children: [
+                            TextSpan(
+                              text: 'tez',
+                              style: TextStyle(
+                                color: isDark ? Colors.white : const Color(0xFF1a1a18),
+                              ),
+                            ),
+                            const TextSpan(
+                              text: 'yubor',
+                              style: TextStyle(color: AppColors.primary),
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Быстрая доставка лекарств',
+                        l10n.quickDelivery,
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ],
                   ),
                 ),
 
-                const SizedBox(height: 32),
-
-                // Environment badge
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: isAdmin
-                        ? AppColors.info.withOpacity(0.15)
-                        : AppColors.primary.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: isAdmin
-                          ? AppColors.info.withOpacity(0.4)
-                          : AppColors.primary.withOpacity(0.3),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        isAdmin ? Icons.admin_panel_settings : Icons.storefront,
-                        size: 14,
-                        color: isAdmin ? AppColors.info : AppColors.primary,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        isAdmin ? 'Администратор' : 'Аптека',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: isAdmin ? AppColors.info : AppColors.primary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
 
                 const SizedBox(height: 28),
 
                 // Title
                 Text(
-                  isAdmin ? 'Вход для администратора' : 'Вход для аптеки',
+                  isAdmin ? l10n.adminLoginTitle : l10n.loginTitle,
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  isAdmin
-                      ? 'Введите email и пароль администратора'
-                      : 'Введите логин и пароль аптеки',
+                  l10n.loginHint,
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
 
@@ -207,10 +174,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppColors.error.withOpacity(0.1),
+                      color: AppColors.error.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
-                          color: AppColors.error.withOpacity(0.3)),
+                          color: AppColors.error.withValues(alpha: 0.3)),
                     ),
                     child: Row(
                       children: [
@@ -238,8 +205,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                 // Login field
                 CustomTextField(
-                  label: isAdmin ? 'Email' : 'Логин',
-                  hint: isAdmin ? 'admin@tezyubor.uz' : 'pharmacy_login',
+                  label: isAdmin ? 'Email' : l10n.loginFieldLbl,
                   controller: _loginController,
                   keyboardType: isAdmin
                       ? TextInputType.emailAddress
@@ -249,11 +215,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   onSubmitted: (_) =>
                       FocusScope.of(context).requestFocus(_passwordFocus),
                   validator: (v) {
-                    if (v == null || v.trim().isEmpty) {
-                      return isAdmin
-                          ? 'Введите email'
-                          : 'Введите логин';
-                    }
+                    if (v == null || v.trim().isEmpty) return l10n.enterLoginHint;
                     return null;
                   },
                 ),
@@ -262,7 +224,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                 // Password field
                 CustomTextField(
-                  label: 'Пароль',
+                  label: l10n.passwordLbl,
                   controller: _passwordController,
                   isPassword: true,
                   focusNode: _passwordFocus,
@@ -270,7 +232,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   prefixIcon: const Icon(Icons.lock_outline),
                   onSubmitted: (_) => _submit(),
                   validator: (v) {
-                    if (v == null || v.isEmpty) return 'Введите пароль';
+                    if (v == null || v.isEmpty) return l10n.enterPasswordHint;
                     return null;
                   },
                 ),
@@ -279,22 +241,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                 // Submit button
                 CustomButton(
-                  label: 'Войти',
+                  label: l10n.loginBtn,
                   isLoading: authState.isLoading,
                   onPressed: _submit,
                 ),
 
                 const SizedBox(height: 40),
 
-                // Hint for env switch
-                Text(
-                  'Нажмите на лого 5 раз, чтобы сменить окружение',
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodySmall
-                      ?.copyWith(fontSize: 10),
-                  textAlign: TextAlign.center,
-                ),
+                const SizedBox(height: 8),
               ],
             ),
           ),

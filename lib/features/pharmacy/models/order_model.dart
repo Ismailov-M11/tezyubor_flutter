@@ -1,5 +1,5 @@
 class PharmacyOrder {
-  final int id;
+  final String id;
   final String token;
   final String status;
   final double medicinesTotal;
@@ -28,20 +28,18 @@ class PharmacyOrder {
   });
 
   factory PharmacyOrder.fromJson(Map<String, dynamic> json) => PharmacyOrder(
-        id: json['id'] as int,
-        token: json['token'] as String,
-        status: json['status'] as String,
-        medicinesTotal: (json['medicinesTotal'] as num).toDouble(),
-        deliveryPrice: json['deliveryPrice'] != null
-            ? (json['deliveryPrice'] as num).toDouble()
-            : null,
+        id: json['id']?.toString() ?? '',
+        token: json['token'] as String? ?? '',
+        status: json['status'] as String? ?? 'pending',
+        medicinesTotal: (json['medicinesTotal'] as num?)?.toDouble() ?? 0,
+        deliveryPrice: (json['deliveryPrice'] as num?)?.toDouble(),
         customerName: json['customerName'] as String?,
         customerPhone: json['customerPhone'] as String?,
         customerAddress: json['customerAddress'] as String?,
         courierType: json['courierType'] as String?,
         trackingUrl: json['trackingUrl'] as String?,
-        createdAt: json['createdAt'] as String,
-        updatedAt: json['updatedAt'] as String,
+        createdAt: json['createdAt'] as String? ?? '',
+        updatedAt: json['updatedAt'] as String? ?? '',
       );
 }
 

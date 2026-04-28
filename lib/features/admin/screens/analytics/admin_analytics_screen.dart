@@ -168,7 +168,7 @@ class _KpiCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: color.withOpacity(0.15),
+                      color: color.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(icon, color: color, size: 22),
@@ -190,7 +190,7 @@ class _KpiCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: color.withOpacity(0.15),
+                      color: color.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(icon, color: color, size: 18),
@@ -250,7 +250,7 @@ class _BreakdownCard extends StatelessWidget {
                       backgroundColor: Theme.of(context)
                           .colorScheme
                           .outline
-                          .withOpacity(0.2),
+                          .withValues(alpha: 0.2),
                       valueColor: AlwaysStoppedAnimation(item.color),
                       borderRadius: BorderRadius.circular(4),
                       minHeight: 6,
@@ -347,7 +347,7 @@ class _DailyChart extends StatelessWidget {
                   color: Theme.of(context)
                       .colorScheme
                       .outline
-                      .withOpacity(0.3),
+                      .withValues(alpha: 0.3),
                   strokeWidth: 1,
                 ),
               ),

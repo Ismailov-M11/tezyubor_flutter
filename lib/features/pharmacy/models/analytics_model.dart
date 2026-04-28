@@ -19,27 +19,43 @@ class PharmacyAnalytics {
 
   factory PharmacyAnalytics.fromJson(Map<String, dynamic> json) =>
       PharmacyAnalytics(
-        totalOrders: json['totalOrders'] as int? ?? 0,
-        totalMedicines: (json['totalMedicines'] as num?)?.toDouble() ?? 0,
-        totalDelivery: (json['totalDelivery'] as num?)?.toDouble() ?? 0,
+        totalOrders: (json['totalOrders'] as num?)?.toInt() ?? 0,
+        totalMedicines:
+            ((json['totalMedicinesAmount'] ?? json['totalMedicines']) as num?)
+                    ?.toDouble() ??
+                0,
+        totalDelivery:
+            ((json['totalDeliveryAmount'] ?? json['totalDelivery']) as num?)
+                    ?.toDouble() ??
+                0,
         totalRevenue: (json['totalRevenue'] as num?)?.toDouble() ?? 0,
-        ordersByStatus: Map<String, int>.from(
-          (json['ordersByStatus'] as Map?)?.map(
-                (k, v) => MapEntry(k.toString(), (v as num).toInt()),
-              ) ??
-              {},
-        ),
-        ordersByCourier: Map<String, int>.from(
-          (json['ordersByCourier'] as Map?)?.map(
-                (k, v) => MapEntry(k.toString(), (v as num).toInt()),
-              ) ??
-              {},
-        ),
+        ordersByStatus: _toMap(json['ordersByStatus'], 'status', 'count'),
+        ordersByCourier: _toMap(json['ordersByCourier'], 'courier', 'count'),
         ordersByDay: (json['ordersByDay'] as List?)
                 ?.map((e) => DailyOrders.fromJson(e as Map<String, dynamic>))
                 .toList() ??
             [],
       );
+
+  static Map<String, int> _toMap(dynamic raw, String key, String value) {
+    if (raw is Map) {
+      return Map<String, int>.from(
+        raw.map((k, v) => MapEntry(k.toString(), (v as num).toInt())),
+      );
+    }
+    if (raw is List) {
+      return Map.fromEntries(
+        raw.map((e) {
+          final m = e as Map;
+          return MapEntry(
+            m[key]?.toString() ?? '',
+            (m[value] as num?)?.toInt() ?? 0,
+          );
+        }),
+      );
+    }
+    return {};
+  }
 
   factory PharmacyAnalytics.empty() => const PharmacyAnalytics(
         totalOrders: 0,
@@ -59,7 +75,7 @@ class DailyOrders {
   const DailyOrders({required this.date, required this.count});
 
   factory DailyOrders.fromJson(Map<String, dynamic> json) => DailyOrders(
-        date: json['date'] as String,
-        count: (json['count'] as num).toInt(),
+        date: json['date'] as String? ?? '',
+        count: (json['count'] as num?)?.toInt() ?? 0,
       );
 }

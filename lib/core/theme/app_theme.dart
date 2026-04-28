@@ -21,28 +21,28 @@ class AppTheme {
         brightness: brightness,
         primary: AppColors.primary,
         onPrimary: Colors.white,
-        primaryContainer: AppColors.primary.withOpacity(0.15),
+        primaryContainer: AppColors.primary.withValues(alpha:0.15),
         onPrimaryContainer: AppColors.primary,
         secondary: AppColors.primary,
         onSecondary: Colors.white,
-        secondaryContainer: AppColors.primary.withOpacity(0.1),
+        secondaryContainer: AppColors.primary.withValues(alpha:0.1),
         onSecondaryContainer: AppColors.primary,
         tertiary: AppColors.info,
         onTertiary: Colors.white,
-        tertiaryContainer: AppColors.info.withOpacity(0.1),
+        tertiaryContainer: AppColors.info.withValues(alpha:0.1),
         onTertiaryContainer: AppColors.info,
         error: AppColors.error,
         onError: Colors.white,
-        errorContainer: AppColors.error.withOpacity(0.1),
+        errorContainer: AppColors.error.withValues(alpha:0.1),
         onErrorContainer: AppColors.error,
         surface: card,
         onSurface: fg,
         surfaceContainerHighest: muted,
         onSurfaceVariant: mutedFg,
         outline: border,
-        outlineVariant: border.withOpacity(0.5),
-        shadow: Colors.black.withOpacity(0.1),
-        scrim: Colors.black.withOpacity(0.5),
+        outlineVariant: border.withValues(alpha:0.5),
+        shadow: Colors.black.withValues(alpha:0.1),
+        scrim: Colors.black.withValues(alpha:0.5),
         inverseSurface: isLight ? AppColors.backgroundDark : AppColors.backgroundLight,
         onInverseSurface: isLight ? AppColors.foregroundDark : AppColors.foregroundLight,
         inversePrimary: AppColors.primary,
@@ -123,19 +123,19 @@ class AppTheme {
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: bg,
-        indicatorColor: AppColors.primary.withOpacity(isLight ? 0.1 : 0.15),
+        indicatorColor: AppColors.primary.withValues(alpha:isLight ? 0.1 : 0.15),
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         height: 64,
         iconTheme: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return IconThemeData(color: AppColors.primary, size: 22);
+            return const IconThemeData(color: AppColors.primary, size: 22);
           }
           return IconThemeData(color: mutedFg, size: 22);
         }),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return TextStyle(
+            return const TextStyle(
               color: AppColors.primary,
               fontWeight: FontWeight.w600,
               fontSize: 11,

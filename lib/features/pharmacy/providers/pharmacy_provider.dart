@@ -36,14 +36,17 @@ class PharmacyProfileNotifier extends StateNotifier<PharmacyProfileState> {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       final response = await ApiClient.instance.get('/pharmacy/me');
-      final profile = PharmacyProfile.fromJson(
-          response.data as Map<String, dynamic>);
+      final body = response.data as Map<String, dynamic>;
+      final data = (body['data'] ?? body) as Map<String, dynamic>;
+      final profile = PharmacyProfile.fromJson(data);
       state = state.copyWith(profile: profile, isLoading: false);
     } on DioException catch (e) {
       state = state.copyWith(
         isLoading: false,
         error: e.response?.data?['message'] as String? ?? 'Ошибка загрузки',
       );
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
 
@@ -57,11 +60,12 @@ class PharmacyProfileNotifier extends StateNotifier<PharmacyProfileState> {
           if (email != null) 'email': email,
         },
       );
-      final profile = PharmacyProfile.fromJson(
-          response.data as Map<String, dynamic>);
+      final body = response.data as Map<String, dynamic>;
+      final data = (body['data'] ?? body) as Map<String, dynamic>;
+      final profile = PharmacyProfile.fromJson(data);
       state = state.copyWith(profile: profile);
       return true;
-    } on DioException catch (_) {
+    } catch (_) {
       return false;
     }
   }

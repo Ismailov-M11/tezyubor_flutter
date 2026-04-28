@@ -1,23 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/l10n/app_l10n.dart';
+import '../../../../core/network/api_client.dart';
+import '../../../../shared/widgets/custom_button.dart';
+import '../../../../shared/widgets/custom_text_field.dart';
 import '../../../../shared/widgets/loading_overlay.dart';
 import '../../../auth/providers/auth_provider.dart';
 import '../../providers/pharmacy_provider.dart';
+import '../location/location_picker_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final profileState = ref.watch(pharmacyProfileProvider);
     final themeMode = ref.watch(themeModeProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final locale = ref.watch(localeProvider);
     final profile = profileState.profile;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Настройки')),
+      appBar: AppBar(title: Text(l10n.settings)),
       body: profileState.isLoading && profile == null
           ? const CenteredLoader()
           : ListView(
@@ -30,68 +36,90 @@ class SettingsScreen extends ConsumerWidget {
                 // Subscription warning
                 if (profile != null && profile.isSubscriptionExpiringSoon)
                   _SubscriptionWarning(
-                    daysLeft: profile.daysUntilExpiry ?? 0,
-                  ),
-
+                      daysLeft: profile.daysUntilExpiry ?? 0),
                 if (profile != null && profile.isSubscriptionExpiringSoon)
                   const SizedBox(height: 16),
 
-                // Settings section
+                // ── Appearance ──────────────────────────────────────────
                 _SettingsSection(
-                  title: 'Внешний вид',
+                  title: l10n.appearance,
                   children: [
+                    // Theme
                     _SettingsTile(
-                      icon: Icons.dark_mode_outlined,
-                      title: 'Тёмная тема',
-                      trailing: Switch(
-                        value: themeMode == ThemeMode.dark,
-                        onChanged: (_) =>
-                            ref.read(themeModeProvider.notifier).toggle(),
-                        activeColor: AppColors.primary,
-                      ),
+                      icon: Icons.palette_outlined,
+                      title: l10n.theme,
+                      subtitle: _themeLabel(themeMode, l10n),
+                      onTap: () => _showThemePicker(context, ref, l10n),
+                    ),
+                    // Language
+                    _SettingsTile(
+                      icon: Icons.language_outlined,
+                      title: l10n.language,
+                      subtitle: _localeName(locale.languageCode),
+                      onTap: () => _showLanguagePicker(context, ref, l10n),
                     ),
                   ],
                 ),
                 const SizedBox(height: 12),
 
+                // ── Account ─────────────────────────────────────────────
                 _SettingsSection(
-                  title: 'Аккаунт',
+                  title: l10n.account,
                   children: [
                     _SettingsTile(
                       icon: Icons.person_outline,
-                      title: 'Профиль аптеки',
-                      onTap: () {
-                        // TODO: Edit profile
-                      },
+                      title: l10n.profileStore,
+                      onTap: () =>
+                          _showEditProfile(context, ref, profile, l10n),
                     ),
                     _SettingsTile(
                       icon: Icons.lock_outline,
-                      title: 'Изменить пароль',
-                      onTap: () {
-                        // TODO: Change password
-                      },
+                      title: l10n.changePassword,
+                      onTap: () => _showChangePassword(context, ref, l10n),
+                    ),
+                    _SettingsTile(
+                      icon: Icons.location_on_outlined,
+                      title: l10n.location,
+                      subtitle: profile?.address,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const LocationPickerScreen()),
+                      ),
                     ),
                     _SettingsTile(
                       icon: Icons.credit_card_outlined,
-                      title: 'Подписка',
-                      subtitle: profile?.subscriptionExpiry != null
-                          ? 'До ${_formatDate(profile!.subscriptionExpiry!)}'
+                      title: l10n.subscription,
+                      subtitle: _subscriptionSubtitle(profile, l10n),
+                      trailing: profile != null &&
+                              (profile.daysUntilExpiry == null ||
+                                  profile.daysUntilExpiry! <= 14)
+                          ? TextButton(
+                              onPressed: () =>
+                                  _paySubscription(context, l10n),
+                              child: Text(
+                                l10n.paySubscription,
+                                style: const TextStyle(
+                                    color: AppColors.primary,
+                                    fontSize: 12),
+                              ),
+                            )
                           : null,
-                      onTap: () {
-                        // TODO: Subscription page
-                      },
+                      onTap: () =>
+                          _showSubscriptionInfo(context, profile, l10n),
                     ),
                   ],
                 ),
                 const SizedBox(height: 12),
 
+                // ── App ─────────────────────────────────────────────────
                 _SettingsSection(
-                  title: 'Приложение',
+                  title: l10n.application,
                   children: [
                     _SettingsTile(
                       icon: Icons.info_outline,
-                      title: 'О приложении',
-                      subtitle: 'TezyUbor v1.0.0',
+                      title: l10n.aboutApp,
+                      subtitle: 'tezyubor v1.0.0',
                       onTap: () {},
                     ),
                   ],
@@ -100,11 +128,11 @@ class SettingsScreen extends ConsumerWidget {
 
                 // Logout
                 OutlinedButton.icon(
-                  onPressed: () => _logout(context, ref),
+                  onPressed: () => _logout(context, ref, l10n),
                   icon: const Icon(Icons.logout, color: AppColors.error),
-                  label: const Text(
-                    'Выйти',
-                    style: TextStyle(color: AppColors.error),
+                  label: Text(
+                    l10n.logout,
+                    style: const TextStyle(color: AppColors.error),
                   ),
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: AppColors.error),
@@ -116,7 +144,30 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  String _formatDate(String iso) {
+  String _themeLabel(ThemeMode mode, AppL10n l10n) => switch (mode) {
+        ThemeMode.dark => l10n.themeDark,
+        ThemeMode.light => l10n.themeLight,
+        _ => l10n.themeSystem,
+      };
+
+  String _localeName(String code) => switch (code) {
+        'uz' => "O'zbekcha",
+        'en' => 'English',
+        _ => 'Русский',
+      };
+
+  String? _subscriptionSubtitle(dynamic profile, AppL10n l10n) {
+    if (profile == null) return null;
+    final expiry = profile.subscriptionExpiry as String?;
+    if (expiry == null) return null;
+    final days = profile.daysUntilExpiry as int?;
+    final date = _fmtDate(expiry);
+    if (days != null && days <= 0) return '${l10n.subscriptionExpired} ($date)';
+    if (days != null) return '$date · $days ${l10n.daysLeft}';
+    return date;
+  }
+
+  String _fmtDate(String iso) {
     try {
       final dt = DateTime.parse(iso);
       return '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}';
@@ -125,20 +176,254 @@ class SettingsScreen extends ConsumerWidget {
     }
   }
 
-  Future<void> _logout(BuildContext context, WidgetRef ref) async {
+  void _showThemePicker(
+      BuildContext context, WidgetRef ref, AppL10n l10n) {
+    final current = ref.read(themeModeProvider);
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40, height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Text(l10n.theme,
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            _ThemeOption(
+              icon: Icons.light_mode_outlined,
+              label: l10n.themeLight,
+              selected: current == ThemeMode.light,
+              onTap: () {
+                ref.read(themeModeProvider.notifier).setMode(ThemeMode.light);
+                Navigator.pop(context);
+              },
+            ),
+            _ThemeOption(
+              icon: Icons.dark_mode_outlined,
+              label: l10n.themeDark,
+              selected: current == ThemeMode.dark,
+              onTap: () {
+                ref.read(themeModeProvider.notifier).setMode(ThemeMode.dark);
+                Navigator.pop(context);
+              },
+            ),
+            _ThemeOption(
+              icon: Icons.brightness_auto_outlined,
+              label: l10n.themeSystem,
+              selected: current == ThemeMode.system,
+              onTap: () {
+                ref.read(themeModeProvider.notifier).setMode(ThemeMode.system);
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showLanguagePicker(
+      BuildContext context, WidgetRef ref, AppL10n l10n) {
+    final current = ref.read(localeProvider);
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40, height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Text(l10n.language,
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            for (final (code, name) in [
+              ('ru', 'Русский'),
+              ('uz', "O'zbekcha"),
+              ('en', 'English'),
+            ])
+              ListTile(
+                title: Text(name),
+                leading: Radio<String>(
+                  value: code,
+                  groupValue: current.languageCode,
+                  activeColor: AppColors.primary,
+                  onChanged: (_) {
+                    ref
+                        .read(localeProvider.notifier)
+                        .setLocale(Locale(code));
+                    Navigator.pop(context);
+                  },
+                ),
+                onTap: () {
+                  ref
+                      .read(localeProvider.notifier)
+                      .setLocale(Locale(code));
+                  Navigator.pop(context);
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showEditProfile(
+      BuildContext context, WidgetRef ref, dynamic profile, AppL10n l10n) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _EditProfileSheet(profile: profile, ref: ref, l10n: l10n),
+    );
+  }
+
+  void _showChangePassword(
+      BuildContext context, WidgetRef ref, AppL10n l10n) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _ChangePasswordSheet(ref: ref, l10n: l10n),
+    );
+  }
+
+  void _showSubscriptionInfo(
+      BuildContext context, dynamic profile, AppL10n l10n) {
+    final expiry = profile?.subscriptionExpiry as String?;
+    final days = profile?.daysUntilExpiry as int?;
+    final isExpired = days != null && days <= 0;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.subscription),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (expiry != null) ...[
+              Row(
+                children: [
+                  Icon(
+                    isExpired
+                        ? Icons.warning_amber
+                        : Icons.check_circle_outline,
+                    color: isExpired ? AppColors.error : AppColors.success,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    isExpired
+                        ? l10n.subscriptionExpired
+                        : l10n.subscriptionActive,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color:
+                          isExpired ? AppColors.error : AppColors.success,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text('${l10n.to}: ${_fmtDate(expiry)}'),
+              if (days != null && !isExpired)
+                Text('$days ${l10n.daysLeft}'),
+            ] else
+              const Text('—'),
+          ],
+        ),
+        actions: [
+          if (isExpired || (days != null && days <= 14))
+            TextButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                _paySubscription(context, l10n);
+              },
+              child: Text(l10n.paySubscription),
+            ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l10n.close),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _paySubscription(BuildContext context, AppL10n l10n) async {
+    try {
+      final response =
+          await ApiClient.instance.post('/pharmacy/subscription/pay');
+      final body = response.data as Map<String, dynamic>;
+      final data = (body['data'] ?? body) as Map<String, dynamic>;
+      final url = data['checkoutUrl'] as String? ?? data['url'] as String?;
+      if (url != null) {
+        final uri = Uri.parse(url);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.inAppWebView);
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.error)),
+        );
+      }
+    }
+  }
+
+  Future<void> _logout(
+      BuildContext context, WidgetRef ref, AppL10n l10n) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Выйти из аккаунта?'),
+        title: Text(l10n.logoutConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Отмена'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(foregroundColor: AppColors.error),
-            child: const Text('Выйти'),
+            style:
+                TextButton.styleFrom(foregroundColor: AppColors.error),
+            child: Text(l10n.logout),
           ),
         ],
       ),
@@ -149,9 +434,279 @@ class SettingsScreen extends ConsumerWidget {
   }
 }
 
+// ─── Theme option tile ────────────────────────────────────────────────────────
+
+class _ThemeOption extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _ThemeOption({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) => ListTile(
+        leading: Icon(icon,
+            color: selected ? AppColors.primary : null),
+        title: Text(label,
+            style: TextStyle(
+                fontWeight:
+                    selected ? FontWeight.w600 : FontWeight.normal)),
+        trailing: selected
+            ? const Icon(Icons.check, color: AppColors.primary)
+            : null,
+        onTap: onTap,
+      );
+}
+
+// ─── Edit profile sheet ───────────────────────────────────────────────────────
+
+class _EditProfileSheet extends StatefulWidget {
+  final dynamic profile;
+  final WidgetRef ref;
+  final AppL10n l10n;
+
+  const _EditProfileSheet(
+      {required this.profile, required this.ref, required this.l10n});
+
+  @override
+  State<_EditProfileSheet> createState() => _EditProfileSheetState();
+}
+
+class _EditProfileSheetState extends State<_EditProfileSheet> {
+  late final TextEditingController _nameCtrl;
+  late final TextEditingController _phoneCtrl;
+  late final TextEditingController _emailCtrl;
+  bool _isLoading = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameCtrl = TextEditingController(
+        text: widget.profile?.name as String? ?? '');
+    _phoneCtrl = TextEditingController(
+        text: widget.profile?.phone as String? ?? '');
+    _emailCtrl = TextEditingController(
+        text: widget.profile?.email as String? ?? '');
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _phoneCtrl.dispose();
+    _emailCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final l10n = widget.l10n;
+    final name = _nameCtrl.text.trim();
+    if (name.isEmpty) {
+      setState(() => _error = l10n.nameCantBeEmpty);
+      return;
+    }
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    final ok = await widget.ref
+        .read(pharmacyProfileProvider.notifier)
+        .update(
+          name: name,
+          phone: _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
+          email: _emailCtrl.text.trim().isEmpty ? null : _emailCtrl.text.trim(),
+        );
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+    if (ok) {
+      Navigator.pop(context);
+    } else {
+      setState(() => _error = l10n.saveError);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = widget.l10n;
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 20, right: 20, top: 12,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _SheetHeader(title: l10n.profileStore),
+          const SizedBox(height: 16),
+          if (_error != null) _ErrorBanner(message: _error!),
+          CustomTextField(
+            label: l10n.storeNameLbl,
+            controller: _nameCtrl,
+            textInputAction: TextInputAction.next,
+          ),
+          const SizedBox(height: 12),
+          CustomTextField(
+            label: l10n.phoneLbl,
+            controller: _phoneCtrl,
+            keyboardType: TextInputType.phone,
+            textInputAction: TextInputAction.next,
+          ),
+          const SizedBox(height: 12),
+          CustomTextField(
+            label: l10n.emailLbl,
+            controller: _emailCtrl,
+            keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.done,
+          ),
+          const SizedBox(height: 20),
+          CustomButton(label: l10n.save, isLoading: _isLoading, onPressed: _save),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Change password sheet ────────────────────────────────────────────────────
+
+class _ChangePasswordSheet extends StatefulWidget {
+  final WidgetRef ref;
+  final AppL10n l10n;
+
+  const _ChangePasswordSheet({required this.ref, required this.l10n});
+
+  @override
+  State<_ChangePasswordSheet> createState() => _ChangePasswordSheetState();
+}
+
+class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
+  final _oldCtrl = TextEditingController();
+  final _newCtrl = TextEditingController();
+  final _confirmCtrl = TextEditingController();
+  bool _isLoading = false;
+  String? _error;
+  String? _success;
+
+  @override
+  void dispose() {
+    _oldCtrl.dispose();
+    _newCtrl.dispose();
+    _confirmCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final l10n = widget.l10n;
+    final old = _oldCtrl.text;
+    final newP = _newCtrl.text;
+    final conf = _confirmCtrl.text;
+
+    if (old.isEmpty || newP.isEmpty || conf.isEmpty) {
+      setState(() => _error = l10n.fillAllFields);
+      return;
+    }
+    if (newP != conf) {
+      setState(() => _error = l10n.passwordsNoMatch);
+      return;
+    }
+    if (newP.length < 6) {
+      setState(() => _error = l10n.passwordTooShort);
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _error = null;
+      _success = null;
+    });
+    try {
+      await ApiClient.instance.put('/pharmacy/me/password', data: {
+        'oldPassword': old,
+        'newPassword': newP,
+      });
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _success = l10n.passwordChanged;
+      });
+      _oldCtrl.clear();
+      _newCtrl.clear();
+      _confirmCtrl.clear();
+      await Future.delayed(const Duration(milliseconds: 1200));
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+      String msg = l10n.changPasswordError;
+      try {
+        final data = (e as dynamic).response?.data;
+        if (data is Map) msg = data['message'] as String? ?? msg;
+      } catch (_) {}
+      setState(() {
+        _isLoading = false;
+        _error = msg;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = widget.l10n;
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 20, right: 20, top: 12,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _SheetHeader(title: l10n.changePasswordTitle),
+          const SizedBox(height: 16),
+          if (_error != null) _ErrorBanner(message: _error!),
+          if (_success != null) _SuccessBanner(message: _success!),
+          CustomTextField(
+            label: l10n.oldPasswordLbl,
+            controller: _oldCtrl,
+            isPassword: true,
+            textInputAction: TextInputAction.next,
+          ),
+          const SizedBox(height: 12),
+          CustomTextField(
+            label: l10n.newPasswordLbl,
+            controller: _newCtrl,
+            isPassword: true,
+            textInputAction: TextInputAction.next,
+          ),
+          const SizedBox(height: 12),
+          CustomTextField(
+            label: l10n.confirmPasswordLbl,
+            controller: _confirmCtrl,
+            isPassword: true,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _save(),
+          ),
+          const SizedBox(height: 20),
+          CustomButton(
+            label: l10n.changePassword,
+            isLoading: _isLoading,
+            onPressed: _save,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Profile card ─────────────────────────────────────────────────────────────
+
 class _ProfileCard extends StatelessWidget {
   final dynamic profile;
-
   const _ProfileCard({required this.profile});
 
   @override
@@ -163,9 +718,11 @@ class _ProfileCard extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 28,
-              backgroundColor: AppColors.primary.withOpacity(0.15),
+              backgroundColor: AppColors.primary.withValues(alpha: 0.15),
               child: Text(
-                profile.name.isNotEmpty ? profile.name[0].toUpperCase() : 'A',
+                (profile.name as String).isNotEmpty
+                    ? (profile.name as String)[0].toUpperCase()
+                    : 'A',
                 style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -205,23 +762,25 @@ class _ProfileCard extends StatelessWidget {
   }
 }
 
+// ─── Subscription warning ─────────────────────────────────────────────────────
+
 class _SubscriptionWarning extends StatelessWidget {
   final int daysLeft;
-
   const _SubscriptionWarning({required this.daysLeft});
 
   @override
   Widget build(BuildContext context) {
     final isExpired = daysLeft <= 0;
     final isCritical = daysLeft <= 7;
-    final color = isExpired || isCritical ? AppColors.error : AppColors.warning;
+    final color =
+        isExpired || isCritical ? AppColors.error : AppColors.warning;
 
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -230,9 +789,10 @@ class _SubscriptionWarning extends StatelessWidget {
           Expanded(
             child: Text(
               isExpired
-                  ? 'Подписка истекла'
-                  : 'Подписка истекает через $daysLeft дн.',
-              style: TextStyle(color: color, fontWeight: FontWeight.w600),
+                  ? context.l10n.subscriptionExpired
+                  : '${context.l10n.subscription}: $daysLeft ${context.l10n.daysLeft}',
+              style:
+                  TextStyle(color: color, fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -241,11 +801,14 @@ class _SubscriptionWarning extends StatelessWidget {
   }
 }
 
+// ─── Settings section & tile ──────────────────────────────────────────────────
+
 class _SettingsSection extends StatelessWidget {
   final String title;
   final List<Widget> children;
 
-  const _SettingsSection({required this.title, required this.children});
+  const _SettingsSection(
+      {required this.title, required this.children});
 
   @override
   Widget build(BuildContext context) {
@@ -277,7 +840,7 @@ class _SettingsSection extends StatelessWidget {
                             color: Theme.of(context)
                                 .colorScheme
                                 .outline
-                                .withOpacity(0.5),
+                                .withValues(alpha: 0.5),
                           ),
                       ],
                     ))
@@ -308,9 +871,13 @@ class _SettingsTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       leading: Icon(icon, color: AppColors.primary, size: 22),
-      title: Text(title, style: Theme.of(context).textTheme.bodyMedium),
+      title: Text(title,
+          style: Theme.of(context).textTheme.bodyMedium),
       subtitle: subtitle != null
-          ? Text(subtitle!, style: Theme.of(context).textTheme.bodySmall)
+          ? Text(subtitle!,
+              style: Theme.of(context).textTheme.bodySmall,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis)
           : null,
       trailing: trailing ??
           (onTap != null
@@ -322,4 +889,61 @@ class _SettingsTile extends StatelessWidget {
       onTap: onTap,
     );
   }
+}
+
+// ─── Shared sheet helpers ─────────────────────────────────────────────────────
+
+class _SheetHeader extends StatelessWidget {
+  final String title;
+  const _SheetHeader({required this.title});
+
+  @override
+  Widget build(BuildContext context) => Row(
+        children: [
+          Text(title,
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(fontWeight: FontWeight.bold)),
+          const Spacer(),
+          IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ],
+      );
+}
+
+class _ErrorBanner extends StatelessWidget {
+  final String message;
+  const _ErrorBanner({required this.message});
+
+  @override
+  Widget build(BuildContext context) => Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: AppColors.error.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(message,
+            style: const TextStyle(color: AppColors.error)),
+      );
+}
+
+class _SuccessBanner extends StatelessWidget {
+  final String message;
+  const _SuccessBanner({required this.message});
+
+  @override
+  Widget build(BuildContext context) => Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: AppColors.success.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(message,
+            style: const TextStyle(color: AppColors.success)),
+      );
 }

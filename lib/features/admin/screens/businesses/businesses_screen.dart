@@ -28,7 +28,7 @@ class _BusinessesScreenState extends ConsumerState<BusinessesScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Аптеки'),
+        title: const Text('Магазины'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -77,8 +77,8 @@ class _BusinessesScreenState extends ConsumerState<BusinessesScreen> {
               : state.pharmacies.isEmpty
                   ? const EmptyState(
                       icon: Icons.storefront_outlined,
-                      title: 'Нет аптек',
-                      subtitle: 'Аптеки появятся после регистрации',
+                      title: 'Нет магазинов',
+                      subtitle: 'Магазины появятся после регистрации',
                     )
                   : RefreshIndicator(
                       onRefresh: () =>
@@ -120,8 +120,8 @@ class _PharmacyCard extends ConsumerWidget {
                 CircleAvatar(
                   radius: 22,
                   backgroundColor: pharmacy.isActive
-                      ? AppColors.primary.withOpacity(0.1)
-                      : AppColors.mutedForegroundLight.withOpacity(0.15),
+                      ? AppColors.primary.withValues(alpha: 0.1)
+                      : AppColors.mutedForegroundLight.withValues(alpha: 0.15),
                   child: Text(
                     pharmacy.name[0].toUpperCase(),
                     style: TextStyle(
@@ -154,8 +154,8 @@ class _PharmacyCard extends ConsumerWidget {
                       horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
                     color: pharmacy.isActive
-                        ? AppColors.success.withOpacity(0.1)
-                        : AppColors.error.withOpacity(0.1),
+                        ? AppColors.success.withValues(alpha: 0.1)
+                        : AppColors.error.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(

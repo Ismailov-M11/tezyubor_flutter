@@ -41,7 +41,7 @@ class _AdminMainScreenState extends ConsumerState<AdminMainScreen> {
         key: 'businesses',
         icon: Icons.storefront_outlined,
         activeIcon: Icons.storefront,
-        label: 'Аптеки',
+        label: 'Магазины',
         permission: 'pharmacies:view',
       ),
       const _AdminTab(
@@ -116,7 +116,7 @@ class _AdminMainScreenState extends ConsumerState<AdminMainScreen> {
         decoration: BoxDecoration(
           border: Border(
             top: BorderSide(
-              color: Theme.of(context).colorScheme.outline.withOpacity(0.5),
+              color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
             ),
           ),
         ),

@@ -19,12 +19,6 @@ class AnalyticsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.analytics),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => ref.read(analyticsProvider.notifier).load(),
-          ),
-        ],
       ),
       body: state.isLoading && data == null
           ? const CenteredLoader()

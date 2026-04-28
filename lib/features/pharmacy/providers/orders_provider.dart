@@ -6,12 +6,14 @@ import '../models/order_model.dart';
 class OrdersFilter {
   final String? search;
   final List<String> statuses;
+  final List<String> couriers;
   final DateTime? dateFrom;
   final DateTime? dateTo;
 
   const OrdersFilter({
     this.search,
     this.statuses = const [],
+    this.couriers = const [],
     this.dateFrom,
     this.dateTo,
   });
@@ -19,21 +21,25 @@ class OrdersFilter {
   bool get isActive =>
       (search != null && search!.isNotEmpty) ||
       statuses.isNotEmpty ||
+      couriers.isNotEmpty ||
       dateFrom != null ||
       dateTo != null;
 
   OrdersFilter copyWith({
     String? search,
     List<String>? statuses,
+    List<String>? couriers,
     DateTime? dateFrom,
     DateTime? dateTo,
     bool clearSearch = false,
     bool clearDates = false,
     bool clearStatuses = false,
+    bool clearCouriers = false,
   }) =>
       OrdersFilter(
         search: clearSearch ? null : search ?? this.search,
         statuses: clearStatuses ? [] : statuses ?? this.statuses,
+        couriers: clearCouriers ? [] : couriers ?? this.couriers,
         dateFrom: clearDates ? null : dateFrom ?? this.dateFrom,
         dateTo: clearDates ? null : dateTo ?? this.dateTo,
       );
@@ -79,6 +85,7 @@ class OrdersNotifier extends StateNotifier<OrdersState> {
       final params = <String, dynamic>{};
       if (f.search != null && f.search!.isNotEmpty) params['search'] = f.search;
       if (f.statuses.isNotEmpty) params['status'] = f.statuses.join(',');
+      if (f.couriers.isNotEmpty) params['courier'] = f.couriers.join(',');
       if (f.dateFrom != null) {
         params['dateFrom'] = f.dateFrom!.toIso8601String().split('T')[0];
       }

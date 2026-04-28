@@ -29,6 +29,8 @@ class AppL10n {
   // Common
   String get save => _t('Сохранить', 'Saqlash', 'Save');
   String get cancel => _t('Отмена', 'Bekor qilish', 'Cancel');
+  String get yes => _t('Да', 'Ha', 'Yes');
+  String get no => _t('Нет', "Yo'q", 'No');
   String get close => _t('Закрыть', 'Yopish', 'Close');
   String get confirm => _t('Подтвердить', 'Tasdiqlash', 'Confirm');
   String get logout => _t('Выйти', 'Chiqish', 'Log out');
@@ -88,6 +90,12 @@ class AppL10n {
   String get copied => _t('Скопировано', 'Nusxalandi', 'Copied');
   String get comment => _t('Комментарий', 'Izoh', 'Comment');
   String get openLink => _t('Открыть', 'Ochish', 'Open');
+  String get orderCommentLbl => _t('Комментарий к заказу', 'Buyurtmaga izoh', 'Order comment');
+  String get orderCommentHint => _t('Опишите заказ...', 'Buyurtmani tasvirlab bering...', 'Describe the order...');
+  String get orderAmountLbl => _t('Сумма заказа', 'Buyurtma summasi', 'Order Amount');
+  String get customerCommentLbl => _t('Комментарий клиента', 'Mijoz izohi', 'Customer comment');
+  String get shareOrderLink => _t('Ссылка для клиента', 'Mijoz havolasi', 'Customer link');
+  String get totalAmountLbl => _t('Итого', 'Jami', 'Total');
 
   // Status labels
   String get stPending => _t('Ожидает клиента', 'Mijoz kutilmoqda', 'Awaiting customer');

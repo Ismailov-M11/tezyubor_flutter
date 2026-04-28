@@ -86,10 +86,6 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
               onPressed: _openFilter,
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => ref.read(clientsProvider.notifier).load(),
-          ),
         ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(56),
@@ -276,18 +272,9 @@ class _ClientDetailSheet extends StatelessWidget {
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          Row(
-            children: [
-              Text(l10n.clientDetails,
-                  style: theme.textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.bold)),
-              const Spacer(),
-              IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ],
-          ),
+          Text(l10n.clientDetails,
+              style: theme.textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
 
           // Avatar + name

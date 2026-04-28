@@ -15,18 +15,18 @@ class CreateOrderSheet extends ConsumerStatefulWidget {
 
 class _CreateOrderSheetState extends ConsumerState<CreateOrderSheet> {
   final _formKey = GlobalKey<FormState>();
+  final _commentController = TextEditingController();
   final _totalController = TextEditingController();
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
-  final _addressController = TextEditingController();
   bool _isLoading = false;
 
   @override
   void dispose() {
+    _commentController.dispose();
     _totalController.dispose();
     _nameController.dispose();
     _phoneController.dispose();
-    _addressController.dispose();
     super.dispose();
   }
 
@@ -34,17 +34,16 @@ class _CreateOrderSheetState extends ConsumerState<CreateOrderSheet> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
 
+    final totalRaw = _totalController.text.trim().replaceAll(',', '.');
     final req = CreateOrderRequest(
-      medicinesTotal: double.parse(_totalController.text.replaceAll(',', '.')),
+      pharmacyComment: _commentController.text.trim(),
+      medicinesTotal: totalRaw.isEmpty ? null : double.tryParse(totalRaw),
       customerName: _nameController.text.trim().isEmpty
           ? null
           : _nameController.text.trim(),
       customerPhone: _phoneController.text.trim().isEmpty
           ? null
           : _phoneController.text.trim(),
-      customerAddress: _addressController.text.trim().isEmpty
-          ? null
-          : _addressController.text.trim(),
     );
 
     final success = await ref.read(ordersProvider.notifier).createOrder(req);
@@ -70,9 +69,7 @@ class _CreateOrderSheetState extends ConsumerState<CreateOrderSheet> {
     final l10n = context.l10n;
     return Padding(
       padding: EdgeInsets.fromLTRB(
-        20,
-        20,
-        20,
+        20, 20, 20,
         MediaQuery.of(context).viewInsets.bottom + 20,
       ),
       child: Form(
@@ -83,10 +80,8 @@ class _CreateOrderSheetState extends ConsumerState<CreateOrderSheet> {
           children: [
             Row(
               children: [
-                Text(
-                  l10n.newOrder,
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
+                Text(l10n.newOrder,
+                    style: Theme.of(context).textTheme.titleLarge),
                 const Spacer(),
                 IconButton(
                   icon: const Icon(Icons.close),
@@ -95,40 +90,54 @@ class _CreateOrderSheetState extends ConsumerState<CreateOrderSheet> {
               ],
             ),
             const SizedBox(height: 20),
+
+            // Комментарий к заказу (обязательное)
             CustomTextField(
-              label: '${l10n.medicinesAmountLbl} *',
+              label: '${l10n.orderCommentLbl} *',
+              hint: l10n.orderCommentHint,
+              controller: _commentController,
+              prefixIcon: const Icon(Icons.comment_outlined),
+              maxLines: 3,
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? l10n.fillAllFields : null,
+            ),
+            const SizedBox(height: 12),
+
+            // Сумма заказа (необязательное)
+            CustomTextField(
+              label: l10n.orderAmountLbl,
               hint: '150000',
               controller: _totalController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              prefixIcon: const Icon(Icons.medication),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              prefixIcon: const Icon(Icons.payments_outlined),
               validator: (v) {
-                if (v == null || v.trim().isEmpty) return l10n.fillAllFields;
-                final parsed = double.tryParse(v.replaceAll(',', '.'));
-                if (parsed == null || parsed <= 0) return l10n.fillAllFields;
+                if (v == null || v.trim().isEmpty) return null;
+                final parsed =
+                    double.tryParse(v.trim().replaceAll(',', '.'));
+                if (parsed == null || parsed < 0) return l10n.fillAllFields;
                 return null;
               },
             ),
             const SizedBox(height: 12),
+
+            // Имя клиента (необязательное)
             CustomTextField(
               label: l10n.customer,
               controller: _nameController,
               prefixIcon: const Icon(Icons.person_outline),
             ),
             const SizedBox(height: 12),
+
+            // Телефон клиента (необязательное)
             CustomTextField(
               label: l10n.phone,
               controller: _phoneController,
               keyboardType: TextInputType.phone,
               prefixIcon: const Icon(Icons.phone_outlined),
             ),
-            const SizedBox(height: 12),
-            CustomTextField(
-              label: l10n.address,
-              controller: _addressController,
-              prefixIcon: const Icon(Icons.location_on_outlined),
-              maxLines: 2,
-            ),
             const SizedBox(height: 24),
+
             CustomButton(
               label: l10n.createOrder,
               isLoading: _isLoading,

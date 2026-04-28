@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
@@ -7,6 +8,10 @@ import '../../../../core/l10n/app_l10n.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../shared/widgets/custom_button.dart';
 import '../../providers/pharmacy_provider.dart';
+
+// Uzbekistan bounding box
+const _uzSW = Point(latitude: 37.1, longitude: 55.9);
+const _uzNE = Point(latitude: 45.6, longitude: 73.2);
 
 class LocationPickerScreen extends ConsumerStatefulWidget {
   const LocationPickerScreen({super.key});
@@ -18,11 +23,16 @@ class LocationPickerScreen extends ConsumerStatefulWidget {
 
 class _LocationPickerScreenState extends ConsumerState<LocationPickerScreen> {
   YandexMapController? _mapController;
-  Point _center = const Point(latitude: 41.2995, longitude: 69.2401); // Tashkent
+  Point _center = const Point(latitude: 41.2995, longitude: 69.2401);
   String _address = '';
   bool _isGeocoding = false;
   bool _isSaving = false;
   final _searchController = TextEditingController();
+  final _searchFocus = FocusNode();
+
+  List<SuggestItem> _suggestions = [];
+  bool _showSuggestions = false;
+  Timer? _debounce;
 
   @override
   void initState() {
@@ -36,7 +46,9 @@ class _LocationPickerScreenState extends ConsumerState<LocationPickerScreen> {
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _searchController.dispose();
+    _searchFocus.dispose();
     super.dispose();
   }
 
@@ -62,11 +74,68 @@ class _LocationPickerScreenState extends ConsumerState<LocationPickerScreen> {
       final result = await sessionPair.$2;
       final items = result.items;
       if (items != null && items.isNotEmpty && mounted) {
-        final addr = items.first.toponymMetadata?.address.formattedAddress ?? '';
+        final addr =
+            items.first.toponymMetadata?.address.formattedAddress ?? '';
         setState(() => _address = addr);
       }
     } catch (_) {}
     if (mounted) setState(() => _isGeocoding = false);
+  }
+
+  void _onSearchChanged(String query) {
+    _debounce?.cancel();
+    if (query.trim().isEmpty) {
+      setState(() {
+        _suggestions = [];
+        _showSuggestions = false;
+      });
+      return;
+    }
+    _debounce = Timer(const Duration(milliseconds: 350), () {
+      _getSuggestions(query.trim());
+    });
+  }
+
+  Future<void> _getSuggestions(String query) async {
+    try {
+      final sessionPair = await YandexSuggest.getSuggestions(
+        text: query,
+        boundingBox: const BoundingBox(northEast: _uzNE, southWest: _uzSW),
+        suggestOptions: const SuggestOptions(
+          suggestType: SuggestType.geo,
+          userPosition: Point(latitude: 41.2995, longitude: 69.2401),
+        ),
+      );
+      final result = await sessionPair.$2;
+      if (mounted) {
+        setState(() {
+          _suggestions = result.items ?? [];
+          _showSuggestions = _suggestions.isNotEmpty;
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _onSuggestionTap(SuggestItem item) async {
+    _searchController.text = item.displayText;
+    _searchFocus.unfocus();
+    setState(() {
+      _suggestions = [];
+      _showSuggestions = false;
+    });
+    if (item.center != null) {
+      await _mapController?.moveCamera(
+        CameraUpdate.newCameraPosition(
+          CameraPosition(target: item.center!, zoom: 16),
+        ),
+        animation: const MapAnimation(
+          type: MapAnimationType.smooth,
+          duration: 0.5,
+        ),
+      );
+    } else {
+      await _searchAddress(item.searchText);
+    }
   }
 
   Future<void> _searchAddress(String query) async {
@@ -74,14 +143,9 @@ class _LocationPickerScreenState extends ConsumerState<LocationPickerScreen> {
     try {
       final sessionPair = await YandexSearch.searchByText(
         searchText: query,
-        geometry: Geometry.fromBoundingBox(BoundingBox(
-          northEast: Point(
-              latitude: _center.latitude + 0.5,
-              longitude: _center.longitude + 0.5),
-          southWest: Point(
-              latitude: _center.latitude - 0.5,
-              longitude: _center.longitude - 0.5),
-        )),
+        geometry: Geometry.fromBoundingBox(
+          const BoundingBox(northEast: _uzNE, southWest: _uzSW),
+        ),
         searchOptions: const SearchOptions(
           searchType: SearchType.geo,
           resultPageSize: 1,
@@ -184,6 +248,7 @@ class _LocationPickerScreenState extends ConsumerState<LocationPickerScreen> {
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
             child: TextField(
               controller: _searchController,
+              focusNode: _searchFocus,
               decoration: InputDecoration(
                 hintText: l10n.searchAddress,
                 prefixIcon: const Icon(Icons.search, size: 20),
@@ -193,13 +258,25 @@ class _LocationPickerScreenState extends ConsumerState<LocationPickerScreen> {
                         icon: const Icon(Icons.clear, size: 18),
                         onPressed: () {
                           _searchController.clear();
-                          setState(() {});
+                          setState(() {
+                            _suggestions = [];
+                            _showSuggestions = false;
+                          });
                         },
                       )
                     : null,
               ),
-              onSubmitted: _searchAddress,
-              onChanged: (_) => setState(() {}),
+              onSubmitted: (q) {
+                setState(() {
+                  _suggestions = [];
+                  _showSuggestions = false;
+                });
+                _searchAddress(q);
+              },
+              onChanged: (q) {
+                setState(() {});
+                _onSearchChanged(q);
+              },
               textInputAction: TextInputAction.search,
             ),
           ),
@@ -220,7 +297,7 @@ class _LocationPickerScreenState extends ConsumerState<LocationPickerScreen> {
             onCameraPositionChanged: _onCameraPositionChanged,
           ),
 
-          // Center pin (static overlay)
+          // Center pin
           const Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -230,6 +307,52 @@ class _LocationPickerScreenState extends ConsumerState<LocationPickerScreen> {
               ],
             ),
           ),
+
+          // Suggestions overlay
+          if (_showSuggestions)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: Material(
+                elevation: 4,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.4,
+                  ),
+                  child: ListView.separated(
+                    padding: EdgeInsets.zero,
+                    shrinkWrap: true,
+                    itemCount: _suggestions.length,
+                    separatorBuilder: (_, __) => Divider(
+                      height: 1,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .outline
+                          .withValues(alpha: 0.3),
+                    ),
+                    itemBuilder: (context, i) {
+                      final item = _suggestions[i];
+                      return ListTile(
+                        dense: true,
+                        leading: const Icon(Icons.location_on_outlined,
+                            color: AppColors.primary, size: 20),
+                        title: Text(item.title,
+                            style:
+                                Theme.of(context).textTheme.bodyMedium),
+                        subtitle: item.subtitle != null && item.subtitle!.isNotEmpty
+                            ? Text(item.subtitle!,
+                                style: Theme.of(context).textTheme.bodySmall,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis)
+                            : null,
+                        onTap: () => _onSuggestionTap(item),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
 
           // Bottom panel
           Positioned(

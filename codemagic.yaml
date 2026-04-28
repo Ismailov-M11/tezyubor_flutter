@@ -21,17 +21,38 @@ workflows:
           bundle install
           bundle exec pod install --repo-update
 
+      - name: Patch Xcode project for unsigned CI build
+        script: |
+          python3 - <<'EOF'
+          path = 'ios/Runner.xcodeproj/project.pbxproj'
+          with open(path, 'r') as f:
+              content = f.read()
+          old = '"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";'
+          new = (
+              '"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";\n'
+              '\t\t\t\tCODE_SIGNING_ALLOWED = NO;\n'
+              '\t\t\t\tCODE_SIGNING_REQUIRED = NO;\n'
+              '\t\t\t\tDEVELOPMENT_TEAM = CIBUILDDUMMY;'
+          )
+          patched = content.replace(old, new)
+          count = patched.count('DEVELOPMENT_TEAM = CIBUILDDUMMY')
+          with open(path, 'w') as f:
+              f.write(patched)
+          print(f'Patched {count} build configuration(s)')
+          EOF
+
       - name: Build iOS (no codesign)
-        script: flutter build ios --release --no-codesign || true
+        script: flutter build ios --release --no-codesign
 
       - name: Package unsigned IPA
         script: |
-          APP="build/ios/iphoneos/Runner.app"
-          if [ ! -d "$APP" ]; then
-            echo "ERROR: Runner.app not found — Xcode build failed"
-            find build/ios -name "*.app" 2>/dev/null || true
+          APP=$(find build/ios -name "Runner.app" -type d | head -1)
+          if [ -z "$APP" ] || [ ! -f "$APP/Runner" ]; then
+            echo "ERROR: Runner binary not found"
+            find build/ios -type f -name "Runner" 2>/dev/null | head -5
             exit 1
           fi
+          echo "Found: $APP  ($(du -sh "$APP" | cut -f1))"
           mkdir -p Payload build/ios/ipa
           cp -r "$APP" Payload/
           zip -r build/ios/ipa/Runner.ipa Payload/

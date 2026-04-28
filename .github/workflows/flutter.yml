@@ -179,18 +179,31 @@ jobs:
         working-directory: ios
         run: bundle exec pod install --repo-update
 
-      # ── 7. Сборка Flutter (без подписи) ─────────────
-      # Создаёт Runner.app в build/ios/iphoneos/
-      - name: Flutter build iOS (no codesign)
-        run: flutter build ios --release --no-codesign
+      # ── 8. Сборка через xcodebuild (без подписи) ────
+      # flutter build ios --no-codesign в новых версиях Flutter
+      # всё равно требует Development Team.
+      # Используем xcodebuild напрямую с CODE_SIGNING_ALLOWED=NO.
+      - name: Build iOS with xcodebuild (no codesign)
+        run: |
+          xcodebuild \
+            -workspace ios/Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Release \
+            -archivePath $PWD/build/ios/Runner.xcarchive \
+            archive \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            DEVELOPMENT_TEAM="" \
+            -allowProvisioningUpdates 2>&1 | tail -50
+          echo "✅ Archive created"
 
-      # ── 8. Упаковка в IPA ───────────────────────────
-      # xcodebuild archive нужен для подписанного IPA.
-      # Для unsigned — вручную пакуем Runner.app в .ipa
+      # ── 9. Упаковка в IPA ───────────────────────────
       - name: Package unsigned IPA
         run: |
           mkdir -p build/ios/ipa/Payload
-          cp -r "build/ios/iphoneos/Runner.app" "build/ios/ipa/Payload/"
+          cp -r "build/ios/Runner.xcarchive/Products/Applications/Runner.app" \
+                "build/ios/ipa/Payload/"
           cd build/ios/ipa
           zip -r "../../../build/ios/Runner-unsigned.ipa" Payload
           echo "✅ IPA created at build/ios/Runner-unsigned.ipa"

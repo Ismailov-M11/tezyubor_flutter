@@ -190,45 +190,29 @@ jobs:
       # ── 9. Поиск и упаковка Runner.app в IPA ─────────
       - name: Package unsigned IPA
         run: |
-          echo "=== All Runner.app locations (following symlinks) ==="
-          find -L build/ios -name "Runner.app" -type d 2>/dev/null | while read p; do
-            echo "  $p  size=$(du -sh "$p" 2>/dev/null | cut -f1)"
-          done
+          echo "=== build/ios/Release-iphoneos/ contents ==="
+          ls -la build/ios/Release-iphoneos/ 2>/dev/null || echo "dir missing"
 
-          echo "=== build/ios/Release-iphoneos/ symlink check ==="
-          ls -la build/ios/ 2>/dev/null | head -20 || true
+          echo "=== Runner.app contents ==="
+          ls -la "build/ios/Release-iphoneos/Runner.app/" 2>/dev/null || echo "Runner.app missing or empty"
 
-          echo "=== Flutter build output ==="
-          ls -la build/ios/Build/Products/ 2>/dev/null || echo "(no Build/Products dir)"
-          ls -la build/ios/Build/Products/Release-iphoneos/ 2>/dev/null || true
-
-          # Flutter кладёт app в build/ios/Build/Products/Release-iphoneos/
-          # build/ios/Release-iphoneos/ — это симлинк туда же
-          # Используем find -L чтобы пройти сквозь симлинки
-          BEST_APP=""
-          BEST_SIZE=0
-          while IFS= read -r path; do
-            size=$(du -sk "$path" 2>/dev/null | cut -f1)
-            echo "  Candidate: $path (${size}KB)"
-            if [ "${size:-0}" -gt "$BEST_SIZE" ]; then
-              BEST_SIZE="$size"
-              BEST_APP="$path"
-            fi
-          done < <(find -L build/ios \
-                     -name "Runner.app" -type d \
-                     -not -path "*Simulator*" \
-                     -not -path "*/ipa/*" 2>/dev/null)
-
-          if [ -z "$BEST_APP" ] || [ "$BEST_SIZE" -lt 100 ]; then
-            echo "❌ No valid Runner.app (best: ${BEST_APP} = ${BEST_SIZE}KB)"
-            echo "Full build/ios tree:"
-            find build/ios -maxdepth 4 -name "*.app" -o -name "Runner" 2>/dev/null | head -30
+          echo "=== Runner binary check ==="
+          BINARY="build/ios/Release-iphoneos/Runner.app/Runner"
+          if [ -f "$BINARY" ]; then
+            echo "✅ Binary found: $(ls -lh "$BINARY" | awk '{print $5}')"
+            file "$BINARY" || true
+          else
+            echo "❌ Binary not found at $BINARY"
+            echo "=== Broad search ==="
+            find /Users/runner -name "Runner" -type f \
+              -path "*/Runner.app/Runner" \
+              -not -path "*Simulator*" 2>/dev/null | head -5 || true
             exit 1
           fi
 
-          echo "✅ Using: $BEST_APP (${BEST_SIZE}KB)"
+          APP_PATH="build/ios/Release-iphoneos/Runner.app"
           mkdir -p build/ios/ipa/Payload
-          cp -rL "$BEST_APP" build/ios/ipa/Payload/Runner.app
+          cp -rL "$APP_PATH" build/ios/ipa/Payload/Runner.app
           (cd build/ios/ipa && zip -r "$OLDPWD/build/ios/Runner-unsigned.ipa" Payload)
           echo "✅ IPA: $(du -sh build/ios/Runner-unsigned.ipa | cut -f1)"
 

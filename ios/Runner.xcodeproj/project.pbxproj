@@ -83,7 +83,7 @@
 				9740EEB61CF901F6004384FC /* Run Script */,
 				97C146EB1CF9000F007C117D /* Sources */,
 				97C146EC1CF9000F007C117D /* Frameworks */,
-				97C146EE1CF9000F007C117D /* CopyFiles */,
+				97C146EA1CF9000F007C117D /* Resources */,
 				3B06F99B1EE456F100AB38D4 /* Thin Binary */,
 			);
 			buildRules = (
@@ -129,7 +129,7 @@
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		97C146EE1CF9000F007C117D /* CopyFiles */ = {
+		97C146EA1CF9000F007C117D /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (

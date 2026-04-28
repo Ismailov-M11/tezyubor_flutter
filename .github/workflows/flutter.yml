@@ -201,9 +201,21 @@ jobs:
       # ── 9. Упаковка в IPA ───────────────────────────
       - name: Package unsigned IPA
         run: |
+          echo "=== xcarchive contents ==="
+          find build/ios/Runner.xcarchive -name "*.app" -type d 2>/dev/null || true
+          ls -la build/ios/Runner.xcarchive/ 2>/dev/null || echo "xcarchive root empty?"
+          ls -la build/ios/Runner.xcarchive/Products/ 2>/dev/null || true
+
+          # Ищем Runner.app в любом месте xcarchive
+          APP_PATH=$(find build/ios/Runner.xcarchive -name "Runner.app" -type d | head -1)
+          if [ -z "$APP_PATH" ]; then
+            echo "❌ Runner.app not found in xcarchive!"
+            exit 1
+          fi
+          echo "✅ Found Runner.app at: $APP_PATH"
+
           mkdir -p build/ios/ipa/Payload
-          cp -r "build/ios/Runner.xcarchive/Products/Applications/Runner.app" \
-                "build/ios/ipa/Payload/"
+          cp -r "$APP_PATH" build/ios/ipa/Payload/
           cd build/ios/ipa
           zip -r "../../../build/ios/Runner-unsigned.ipa" Payload
           echo "✅ IPA created at build/ios/Runner-unsigned.ipa"

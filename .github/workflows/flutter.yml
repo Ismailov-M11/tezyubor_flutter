@@ -179,74 +179,17 @@ jobs:
         working-directory: ios
         run: bundle exec pod install --repo-update
 
-      # ── 8. Flutter build → генерирует App.framework + Flutter.framework
-      # Flutter компилирует Dart код в App.framework (нужен для шага 9).
-      # Xcode 16 отказывается линковать финальный Runner бинарник без подписи,
-      # поэтому игнорируем ошибку Flutter и делаем шаг 9 отдельно.
-      - name: Flutter build iOS (generate Flutter artifacts)
-        run: flutter build ios --release --no-codesign || true
-
-      # ── 9. xcodebuild с ad-hoc подписью ─────────────
-      # CODE_SIGN_IDENTITY="-" = ad-hoc подпись (любой доступный сертификат).
-      # Xcode 16 требует хоть какую-то подпись чтобы слинковать бинарник.
-      # Ad-hoc не требует Apple Developer аккаунта.
-      - name: Build Runner binary (xcodebuild ad-hoc signing)
-        run: |
-          xcodebuild \
-            -workspace ios/Runner.xcworkspace \
-            -scheme Runner \
-            -sdk iphoneos \
-            -configuration Release \
-            SYMROOT="$PWD/build/ios" \
-            CODE_SIGN_IDENTITY="-" \
-            CODE_SIGNING_REQUIRED=YES \
-            CODE_SIGNING_ALLOWED=YES \
-            AD_HOC_CODE_SIGNING_ALLOWED=YES \
-            DEVELOPMENT_TEAM="" \
-            2>&1 | grep -E "error:|BUILD SUCCEEDED|BUILD FAILED|Runner.app" | tail -20
-          echo "Exit: $?"
-
-      # ── 9. Поиск и упаковка Runner.app в IPA ─────────
-      - name: Package unsigned IPA
-        run: |
-          echo "=== build/ios/Release-iphoneos/ contents ==="
-          ls -la build/ios/Release-iphoneos/ 2>/dev/null || echo "dir missing"
-
-          echo "=== Runner.app contents ==="
-          ls -la "build/ios/Release-iphoneos/Runner.app/" 2>/dev/null || echo "Runner.app missing or empty"
-
-          echo "=== Runner binary check ==="
-          BINARY="build/ios/Release-iphoneos/Runner.app/Runner"
-          if [ -f "$BINARY" ]; then
-            echo "✅ Binary found: $(ls -lh "$BINARY" | awk '{print $5}')"
-            file "$BINARY" || true
-          else
-            echo "❌ Binary not found at $BINARY"
-            echo "=== Broad search ==="
-            find /Users/runner -name "Runner" -type f \
-              -path "*/Runner.app/Runner" \
-              -not -path "*Simulator*" 2>/dev/null | head -5 || true
-            exit 1
-          fi
-
-          APP_PATH="build/ios/Release-iphoneos/Runner.app"
-          mkdir -p build/ios/ipa/Payload
-          cp -rL "$APP_PATH" build/ios/ipa/Payload/Runner.app
-          (cd build/ios/ipa && zip -r "$OLDPWD/build/ios/Runner-unsigned.ipa" Payload)
-          echo "✅ IPA: $(du -sh build/ios/Runner-unsigned.ipa | cut -f1)"
+      # ── 8. Сборка IPA (без подписи) ─────────────────
+      # flutter build ipa --no-codesign — официальный способ сборки
+      # unsigned IPA в CI без Apple Developer сертификатов.
+      # Выходной файл: build/ios/ipa/*.ipa
+      - name: Build iOS IPA (no codesign)
+        run: flutter build ipa --release --no-codesign
 
       # ── 9. Загрузить IPA ────────────────────────────
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
           name: ios-ipa-${{ github.run_number }}
-          path: build/ios/Runner-unsigned.ipa
+          path: build/ios/ipa/*.ipa
           retention-days: 30
-
-      # ── 10. Загрузить .app (для Xcode Simulator) ────
-      - name: Upload Runner.app
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios-runner-app-${{ github.run_number }}
-          path: build/ios/iphoneos/Runner.app
-          retention-days: 14

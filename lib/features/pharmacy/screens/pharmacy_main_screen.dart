@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/l10n/app_l10n.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../providers/subscription_provider.dart';
 import 'orders/orders_screen.dart';
 import 'analytics/analytics_screen.dart';
 import 'clients/clients_screen.dart';
 import 'settings/settings_screen.dart';
+import 'subscription_expired_modal.dart';
 
 class PharmacyMainScreen extends ConsumerStatefulWidget {
   final String initialTab;
@@ -28,6 +31,8 @@ class _PharmacyMainScreenState extends ConsumerState<PharmacyMainScreen> {
   void initState() {
     super.initState();
     _currentIndex = _tabIndexFromString(widget.initialTab);
+    final user = ref.read(authStateProvider).user;
+    ref.read(subscriptionProvider.notifier).checkExpiry(user?.subscriptionExpiry);
   }
 
   int _tabIndexFromString(String tab) => switch (tab) {
@@ -40,6 +45,7 @@ class _PharmacyMainScreenState extends ConsumerState<PharmacyMainScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final isExpired = ref.watch(subscriptionProvider).isExpired;
 
     final pages = [
       OrdersScreen(openCreate: widget.openCreateOrder),
@@ -52,10 +58,10 @@ class _PharmacyMainScreenState extends ConsumerState<PharmacyMainScreen> {
       (icon: Icons.receipt_long_outlined, activeIcon: Icons.receipt_long, label: l10n.orders),
       (icon: Icons.bar_chart_outlined, activeIcon: Icons.bar_chart, label: l10n.analytics),
       (icon: Icons.people_outline, activeIcon: Icons.people, label: l10n.clients),
-      (icon: Icons.settings_outlined, activeIcon: Icons.settings, label: l10n.settings),
+      (icon: Icons.person_outline, activeIcon: Icons.person, label: l10n.profile),
     ];
 
-    return Scaffold(
+    final scaffold = Scaffold(
       body: IndexedStack(
         index: _currentIndex,
         children: pages,
@@ -80,6 +86,15 @@ class _PharmacyMainScreenState extends ConsumerState<PharmacyMainScreen> {
               .toList(),
         ),
       ),
+    );
+
+    if (!isExpired) return scaffold;
+
+    return Stack(
+      children: [
+        scaffold,
+        const SubscriptionExpiredModal(),
+      ],
     );
   }
 }

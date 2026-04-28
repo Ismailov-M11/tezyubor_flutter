@@ -269,6 +269,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
                           return _TabOrderList(
                             key: ValueKey(status),
                             orders: orders,
+                            isAllTab: status == 'all',
                             hasFilter: hasFilter,
                             onClearFilter: () => ref
                                 .read(ordersProvider.notifier)
@@ -297,6 +298,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
 class _TabOrderList extends ConsumerWidget {
   final List<PharmacyOrder> orders;
   final bool hasFilter;
+  final bool isAllTab;
   final VoidCallback onClearFilter;
   final VoidCallback onOpenCreate;
   final void Function(PharmacyOrder) onShowDetail;
@@ -305,6 +307,7 @@ class _TabOrderList extends ConsumerWidget {
     super.key,
     required this.orders,
     required this.hasFilter,
+    required this.isAllTab,
     required this.onClearFilter,
     required this.onOpenCreate,
     required this.onShowDetail,
@@ -315,20 +318,27 @@ class _TabOrderList extends ConsumerWidget {
     final l10n = context.l10n;
 
     if (orders.isEmpty) {
+      if (isAllTab) {
+        return EmptyState(
+          icon: Icons.receipt_long,
+          title: l10n.noOrders,
+          subtitle: hasFilter ? l10n.clear : l10n.createFirstOrder,
+          action: hasFilter
+              ? OutlinedButton(
+                  onPressed: onClearFilter,
+                  child: Text(l10n.clear),
+                )
+              : ElevatedButton.icon(
+                  onPressed: onOpenCreate,
+                  icon: const Icon(Icons.add),
+                  label: Text(l10n.createOrder),
+                ),
+        );
+      }
       return EmptyState(
         icon: Icons.receipt_long,
         title: l10n.noOrders,
-        subtitle: hasFilter ? l10n.clear : l10n.createFirstOrder,
-        action: hasFilter
-            ? OutlinedButton(
-                onPressed: onClearFilter,
-                child: Text(l10n.clear),
-              )
-            : ElevatedButton.icon(
-                onPressed: onOpenCreate,
-                icon: const Icon(Icons.add),
-                label: Text(l10n.createOrder),
-              ),
+        subtitle: '',
       );
     }
 

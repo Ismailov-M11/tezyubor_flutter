@@ -25,6 +25,18 @@ class AppL10n {
   String get analytics => _t('Аналитика', 'Analitika', 'Analytics');
   String get clients => _t('Клиенты', 'Mijozlar', 'Clients');
   String get settings => _t('Настройки', 'Sozlamalar', 'Settings');
+  String get profile => _t('Профиль', 'Profil', 'Profile');
+
+  // Subscription blocking modal
+  String get subscriptionExpiredTitle => _t('Подписка истекла', 'Obuna tugadi', 'Subscription expired');
+  String get subscriptionExpiredMsg => _t(
+    'Ваша подписка истекла. Продлите доступ, чтобы продолжить работу.',
+    "Obunangiz tugadi. Davom etish uchun obunani yangilang.",
+    'Your subscription has expired. Renew access to continue.',
+  );
+  String get renewSubscription => _t("Оплатить подписку", "Obunani to'lash", 'Pay subscription');
+  String get subscriptionPrice => _t('100 000 сум / месяц', "100 000 so'm / oy", '100,000 UZS / month');
+  String get subscriptionPayError => _t('Не удалось создать платёж', "To'lov yaratib bo'lmadi", 'Failed to create payment');
 
   // Common
   String get save => _t('Сохранить', 'Saqlash', 'Save');

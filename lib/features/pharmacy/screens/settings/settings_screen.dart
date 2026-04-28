@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/l10n/app_l10n.dart';
 import '../../../../core/network/api_client.dart';
@@ -23,7 +22,7 @@ class SettingsScreen extends ConsumerWidget {
     final profile = profileState.profile;
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.settings)),
+      appBar: AppBar(title: Text(l10n.profile)),
       body: profileState.isLoading && profile == null
           ? const CenteredLoader()
           : ListView(
@@ -32,13 +31,6 @@ class SettingsScreen extends ConsumerWidget {
                 // Profile card
                 if (profile != null) _ProfileCard(profile: profile),
                 const SizedBox(height: 16),
-
-                // Subscription warning
-                if (profile != null && profile.isSubscriptionExpiringSoon)
-                  _SubscriptionWarning(
-                      daysLeft: profile.daysUntilExpiry ?? 0),
-                if (profile != null && profile.isSubscriptionExpiringSoon)
-                  const SizedBox(height: 16),
 
                 // ── Appearance ──────────────────────────────────────────
                 _SettingsSection(
@@ -87,27 +79,6 @@ class SettingsScreen extends ConsumerWidget {
                             builder: (_) => const LocationPickerScreen()),
                       ),
                     ),
-                    _SettingsTile(
-                      icon: Icons.credit_card_outlined,
-                      title: l10n.subscription,
-                      subtitle: _subscriptionSubtitle(profile, l10n),
-                      trailing: profile != null &&
-                              (profile.daysUntilExpiry == null ||
-                                  profile.daysUntilExpiry! <= 14)
-                          ? TextButton(
-                              onPressed: () =>
-                                  _paySubscription(context, l10n),
-                              child: Text(
-                                l10n.paySubscription,
-                                style: const TextStyle(
-                                    color: AppColors.primary,
-                                    fontSize: 12),
-                              ),
-                            )
-                          : null,
-                      onTap: () =>
-                          _showSubscriptionInfo(context, profile, l10n),
-                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -155,26 +126,6 @@ class SettingsScreen extends ConsumerWidget {
         'en' => 'English',
         _ => 'Русский',
       };
-
-  String? _subscriptionSubtitle(dynamic profile, AppL10n l10n) {
-    if (profile == null) return null;
-    final expiry = profile.subscriptionExpiry as String?;
-    if (expiry == null) return null;
-    final days = profile.daysUntilExpiry as int?;
-    final date = _fmtDate(expiry);
-    if (days != null && days <= 0) return '${l10n.subscriptionExpired} ($date)';
-    if (days != null) return '$date · $days ${l10n.daysLeft}';
-    return date;
-  }
-
-  String _fmtDate(String iso) {
-    try {
-      final dt = DateTime.parse(iso);
-      return '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}';
-    } catch (_) {
-      return iso;
-    }
-  }
 
   void _showThemePicker(
       BuildContext context, WidgetRef ref, AppL10n l10n) {
@@ -269,31 +220,37 @@ class SettingsScreen extends ConsumerWidget {
                     .titleMedium
                     ?.copyWith(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            for (final (code, name) in [
-              ('ru', 'Русский'),
-              ('uz', "O'zbekcha"),
-              ('en', 'English'),
-            ])
-              ListTile(
-                title: Text(name),
-                leading: Radio<String>(
-                  value: code,
-                  groupValue: current.languageCode,
-                  activeColor: AppColors.primary,
-                  onChanged: (_) {
-                    ref
-                        .read(localeProvider.notifier)
-                        .setLocale(Locale(code));
-                    Navigator.pop(context);
-                  },
-                ),
-                onTap: () {
-                  ref
-                      .read(localeProvider.notifier)
-                      .setLocale(Locale(code));
+            RadioGroup<String>(
+              groupValue: current.languageCode,
+              onChanged: (value) {
+                if (value != null) {
+                  ref.read(localeProvider.notifier).setLocale(Locale(value));
                   Navigator.pop(context);
-                },
+                }
+              },
+              child: Column(
+                children: [
+                  for (final (code, name) in [
+                    ('ru', 'Русский'),
+                    ('uz', "O'zbekcha"),
+                    ('en', 'English'),
+                  ])
+                    ListTile(
+                      title: Text(name),
+                      leading: Radio<String>(
+                        value: code,
+                        activeColor: AppColors.primary,
+                      ),
+                      onTap: () {
+                        ref
+                            .read(localeProvider.notifier)
+                            .setLocale(Locale(code));
+                        Navigator.pop(context);
+                      },
+                    ),
+                ],
               ),
+            ),
           ],
         ),
       ),
@@ -322,90 +279,6 @@ class SettingsScreen extends ConsumerWidget {
       ),
       builder: (_) => _ChangePasswordSheet(ref: ref, l10n: l10n),
     );
-  }
-
-  void _showSubscriptionInfo(
-      BuildContext context, dynamic profile, AppL10n l10n) {
-    final expiry = profile?.subscriptionExpiry as String?;
-    final days = profile?.daysUntilExpiry as int?;
-    final isExpired = days != null && days <= 0;
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.subscription),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (expiry != null) ...[
-              Row(
-                children: [
-                  Icon(
-                    isExpired
-                        ? Icons.warning_amber
-                        : Icons.check_circle_outline,
-                    color: isExpired ? AppColors.error : AppColors.success,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    isExpired
-                        ? l10n.subscriptionExpired
-                        : l10n.subscriptionActive,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color:
-                          isExpired ? AppColors.error : AppColors.success,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text('${l10n.to}: ${_fmtDate(expiry)}'),
-              if (days != null && !isExpired)
-                Text('$days ${l10n.daysLeft}'),
-            ] else
-              const Text('—'),
-          ],
-        ),
-        actions: [
-          if (isExpired || (days != null && days <= 14))
-            TextButton(
-              onPressed: () {
-                Navigator.pop(ctx);
-                _paySubscription(context, l10n);
-              },
-              child: Text(l10n.paySubscription),
-            ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(l10n.close),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _paySubscription(BuildContext context, AppL10n l10n) async {
-    try {
-      final response =
-          await ApiClient.instance.post('/pharmacy/subscription/pay');
-      final body = response.data as Map<String, dynamic>;
-      final data = (body['data'] ?? body) as Map<String, dynamic>;
-      final url = data['checkoutUrl'] as String? ?? data['url'] as String?;
-      if (url != null) {
-        final uri = Uri.parse(url);
-        if (await canLaunchUrl(uri)) {
-          await launchUrl(uri, mode: LaunchMode.inAppWebView);
-        }
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.error)),
-        );
-      }
-    }
   }
 
   Future<void> _logout(
@@ -762,45 +635,6 @@ class _ProfileCard extends StatelessWidget {
   }
 }
 
-// ─── Subscription warning ─────────────────────────────────────────────────────
-
-class _SubscriptionWarning extends StatelessWidget {
-  final int daysLeft;
-  const _SubscriptionWarning({required this.daysLeft});
-
-  @override
-  Widget build(BuildContext context) {
-    final isExpired = daysLeft <= 0;
-    final isCritical = daysLeft <= 7;
-    final color =
-        isExpired || isCritical ? AppColors.error : AppColors.warning;
-
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.warning_amber, color: color),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              isExpired
-                  ? context.l10n.subscriptionExpired
-                  : '${context.l10n.subscription}: $daysLeft ${context.l10n.daysLeft}',
-              style:
-                  TextStyle(color: color, fontWeight: FontWeight.w600),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 // ─── Settings section & tile ──────────────────────────────────────────────────
 
 class _SettingsSection extends StatelessWidget {
@@ -856,14 +690,12 @@ class _SettingsTile extends StatelessWidget {
   final IconData icon;
   final String title;
   final String? subtitle;
-  final Widget? trailing;
   final VoidCallback? onTap;
 
   const _SettingsTile({
     required this.icon,
     required this.title,
     this.subtitle,
-    this.trailing,
     this.onTap,
   });
 
@@ -879,13 +711,12 @@ class _SettingsTile extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis)
           : null,
-      trailing: trailing ??
-          (onTap != null
-              ? Icon(
-                  Icons.chevron_right,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                )
-              : null),
+      trailing: onTap != null
+          ? Icon(
+              Icons.chevron_right,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            )
+          : null,
       onTap: onTap,
     );
   }

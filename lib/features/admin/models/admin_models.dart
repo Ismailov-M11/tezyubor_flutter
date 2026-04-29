@@ -9,6 +9,7 @@ class AdminOrder {
   final String? customerPhone;
   final String? customerAddress;
   final String? selectedCourier;
+  final String? trackingUrl;
   final String? pharmacyName;
   final String? pharmacyAddress;
   final String? pharmacyPhone;
@@ -25,6 +26,7 @@ class AdminOrder {
     this.customerPhone,
     this.customerAddress,
     this.selectedCourier,
+    this.trackingUrl,
     this.pharmacyName,
     this.pharmacyAddress,
     this.pharmacyPhone,
@@ -42,6 +44,7 @@ class AdminOrder {
         customerPhone: json['customerPhone'] as String?,
         customerAddress: json['customerAddress'] as String?,
         selectedCourier: json['selectedCourier'] as String?,
+        trackingUrl: json['trackingUrl'] as String?,
         pharmacyName: json['pharmacyName'] as String?,
         pharmacyAddress: json['pharmacyAddress'] as String?,
         pharmacyPhone: json['pharmacyPhone'] as String?,

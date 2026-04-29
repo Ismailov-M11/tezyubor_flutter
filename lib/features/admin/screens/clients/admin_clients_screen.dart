@@ -258,12 +258,6 @@ class _ClientCard extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(width: 4),
-              Icon(
-                Icons.chevron_right,
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
-                size: 20,
-              ),
             ],
           ),
         ),

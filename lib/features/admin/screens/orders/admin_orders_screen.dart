@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../../../shared/utils/uz_phone_formatter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/l10n/app_l10n.dart';
@@ -467,6 +469,7 @@ class _CreateOrderSheetState extends ConsumerState<_CreateOrderSheet> {
   @override
   void initState() {
     super.initState();
+    _phoneCtrl.addListener(_onPhoneChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (ref.read(adminPharmaciesProvider).pharmacies.isEmpty) {
         ref.read(adminPharmaciesProvider.notifier).load();
@@ -474,8 +477,21 @@ class _CreateOrderSheetState extends ConsumerState<_CreateOrderSheet> {
     });
   }
 
+  void _onPhoneChanged() {
+    if (UzPhoneFormatter.isComplete(_phoneCtrl.text)) {
+      final digits = UzPhoneFormatter.digitsOnly(_phoneCtrl.text);
+      final clients = ref.read(adminClientsProvider).clients;
+      final match = clients.where((c) =>
+          UzPhoneFormatter.digitsOnly(c.phone) == digits).firstOrNull;
+      if (match?.name != null && _nameCtrl.text.isEmpty) {
+        _nameCtrl.text = match!.name!;
+      }
+    }
+  }
+
   @override
   void dispose() {
+    _phoneCtrl.removeListener(_onPhoneChanged);
     _commentCtrl.dispose();
     _phoneCtrl.dispose();
     _nameCtrl.dispose();
@@ -621,6 +637,7 @@ class _CreateOrderSheetState extends ConsumerState<_CreateOrderSheet> {
                   TextField(
                     controller: _phoneCtrl,
                     keyboardType: TextInputType.phone,
+                    inputFormatters: [UzPhoneFormatter()],
                     decoration: InputDecoration(
                       labelText: l10n.phone,
                       prefixIcon: const Icon(Icons.phone_outlined),
@@ -663,51 +680,131 @@ class _CreateOrderSheetState extends ConsumerState<_CreateOrderSheet> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.6,
-        maxChildSize: 0.9,
-        builder: (_, scroll) => Column(
-          children: [
-            Container(
-              width: 36, height: 4,
-              margin: const EdgeInsets.symmetric(vertical: 10),
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
+      builder: (ctx) => _PharmacyPickerSheet(
+        pharmacies: pharmacies,
+        selectedId: _selectedPharmacyId,
+        l10n: l10n,
+        onSelected: (p) {
+          setState(() {
+            _selectedPharmacyId = p.id;
+            _selectedPharmacyName = p.name;
+          });
+        },
+      ),
+    );
+  }
+}
+
+class _PharmacyPickerSheet extends StatefulWidget {
+  final List<AdminPharmacy> pharmacies;
+  final String? selectedId;
+  final AppL10n l10n;
+  final void Function(AdminPharmacy) onSelected;
+
+  const _PharmacyPickerSheet({
+    required this.pharmacies,
+    required this.selectedId,
+    required this.l10n,
+    required this.onSelected,
+  });
+
+  @override
+  State<_PharmacyPickerSheet> createState() => _PharmacyPickerSheetState();
+}
+
+class _PharmacyPickerSheetState extends State<_PharmacyPickerSheet> {
+  final _searchCtrl = TextEditingController();
+  List<AdminPharmacy> _filtered = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _filtered = widget.pharmacies;
+    _searchCtrl.addListener(_onSearch);
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.removeListener(_onSearch);
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  void _onSearch() {
+    final q = _searchCtrl.text.toLowerCase();
+    setState(() {
+      _filtered = q.isEmpty
+          ? widget.pharmacies
+          : widget.pharmacies
+              .where((p) =>
+                  p.name.toLowerCase().contains(q) ||
+                  p.login.toLowerCase().contains(q))
+              .toList();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = widget.l10n;
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.6,
+      maxChildSize: 0.9,
+      builder: (_, scroll) => Column(
+        children: [
+          Container(
+            width: 36, height: 4,
+            margin: const EdgeInsets.symmetric(vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            child: Text(l10n.adminSelectPharmacy,
+                style: Theme.of(context).textTheme.titleMedium
+                    ?.copyWith(fontWeight: FontWeight.bold)),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: TextField(
+              controller: _searchCtrl,
+              autofocus: true,
+              decoration: InputDecoration(
+                hintText: l10n.search,
+                prefixIcon: const Icon(Icons.search, size: 20),
+                isDense: true,
+                suffixIcon: _searchCtrl.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, size: 18),
+                        onPressed: () => _searchCtrl.clear(),
+                      )
+                    : null,
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-              child: Text(l10n.adminSelectPharmacy,
-                  style: Theme.of(context).textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.bold)),
+          ),
+          const Divider(height: 1),
+          Expanded(
+            child: ListView.builder(
+              controller: scroll,
+              itemCount: _filtered.length,
+              itemBuilder: (_, i) {
+                final p = _filtered[i];
+                return ListTile(
+                  title: Text(p.name),
+                  subtitle: Text(p.login),
+                  selected: widget.selectedId == p.id,
+                  selectedColor: AppColors.primary,
+                  onTap: () {
+                    widget.onSelected(p);
+                    Navigator.pop(context);
+                  },
+                );
+              },
             ),
-            const Divider(height: 1),
-            Expanded(
-              child: ListView.builder(
-                controller: scroll,
-                itemCount: pharmacies.length,
-                itemBuilder: (_, i) {
-                  final p = pharmacies[i];
-                  return ListTile(
-                    title: Text(p.name),
-                    subtitle: Text(p.login),
-                    selected: _selectedPharmacyId == p.id,
-                    selectedColor: AppColors.primary,
-                    onTap: () {
-                      setState(() {
-                        _selectedPharmacyId = p.id;
-                        _selectedPharmacyName = p.name;
-                      });
-                      Navigator.pop(ctx);
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -780,8 +877,6 @@ class _AdminOrderCard extends ConsumerWidget {
         me.isSuperAdmin || me.permissions.contains('orders:confirm');
     final canCancel =
         me.isSuperAdmin || me.permissions.contains('orders:cancel');
-    final canDelete =
-        me.isSuperAdmin || me.permissions.contains('orders:delete');
 
     return Card(
       child: InkWell(
@@ -833,9 +928,8 @@ class _AdminOrderCard extends ConsumerWidget {
                     order.selectedCourier!.toUpperCase()),
               _row(context, Icons.access_time, l10n.adminOrderDate,
                   _formatDate(order.createdAt)),
-              if ((order.status == 'pending' ||
-                      order.status == 'awaiting_confirmation') &&
-                  (canConfirm || canCancel || canDelete)) ...[
+              if (order.status == 'awaiting_confirmation' &&
+                  (canConfirm || canCancel)) ...[
                 const SizedBox(height: 12),
                 const Divider(),
                 const SizedBox(height: 8),
@@ -859,18 +953,6 @@ class _AdminOrderCard extends ConsumerWidget {
                         style: IconButton.styleFrom(
                           backgroundColor:
                               AppColors.warning.withValues(alpha: 0.1),
-                        ),
-                      ),
-                    ],
-                    if (canDelete) ...[
-                      const SizedBox(width: 8),
-                      IconButton(
-                        onPressed: () => _deleteOrder(context, ref),
-                        icon: const Icon(Icons.delete_outline,
-                            color: AppColors.error),
-                        style: IconButton.styleFrom(
-                          backgroundColor:
-                              AppColors.error.withValues(alpha: 0.1),
                         ),
                       ),
                     ],
@@ -964,29 +1046,6 @@ class _AdminOrderCard extends ConsumerWidget {
     }
   }
 
-  Future<void> _deleteOrder(BuildContext context, WidgetRef ref) async {
-    final l10n = context.l10n;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.adminDeleteOrder),
-        content: Text(l10n.adminDeleteOrderMsg),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: Text(l10n.cancel)),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(foregroundColor: AppColors.error),
-            child: Text(l10n.yes),
-          ),
-        ],
-      ),
-    );
-    if (confirmed == true && context.mounted) {
-      await ref.read(adminOrdersProvider.notifier).deleteOrder(order.id);
-    }
-  }
 }
 
 // ─── Order detail sheet ───────────────────────────────────────────────────────
@@ -1127,36 +1186,73 @@ class _AdminOrderDetailSheet extends ConsumerWidget {
                     _DetailRow(
                         icon: Icons.local_shipping_outlined,
                         label: l10n.courier,
-                        value:
-                            order.selectedCourier!.toUpperCase()),
+                        value: order.selectedCourier!.toUpperCase()),
+                    if (order.trackingUrl != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: GestureDetector(
+                          onTap: () async {
+                            final uri = Uri.tryParse(order.trackingUrl!);
+                            if (uri != null) await launchUrl(uri, mode: LaunchMode.externalApplication);
+                          },
+                          child: Row(
+                            children: [
+                              const Icon(Icons.open_in_new, size: 14, color: AppColors.primary),
+                              const SizedBox(width: 6),
+                              Text(
+                                l10n.trackingLink,
+                                style: const TextStyle(
+                                  color: AppColors.primary,
+                                  fontSize: 13,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                   ]),
                 ],
-                if ((order.status == 'pending' ||
-                        order.status == 'awaiting_confirmation') &&
-                    (canConfirm || canCancel || canDelete)) ...[
-                  const SizedBox(height: 16),
+                const SizedBox(height: 16),
+                if (order.status == 'awaiting_confirmation' &&
+                    (canConfirm || canCancel)) ...[
                   Row(
                     children: [
                       if (canCancel)
                         Expanded(
                           child: OutlinedButton(
                             onPressed: () async {
-                              final ok = await ref
-                                  .read(adminOrdersProvider.notifier)
-                                  .cancelOrder(order.token);
-                              if (context.mounted) {
-                                Navigator.pop(context);
-                                ScaffoldMessenger.of(context)
-                                    .showSnackBar(SnackBar(
-                                        content: Text(ok
-                                            ? l10n.adminOrderCancelled
-                                            : l10n.adminOrderError)));
+                              final confirmed = await showDialog<bool>(
+                                context: context,
+                                builder: (ctx) => AlertDialog(
+                                  title: Text(l10n.adminCancelOrder),
+                                  content: Text(l10n.adminDeleteOrderMsg),
+                                  actions: [
+                                    TextButton(
+                                        onPressed: () => Navigator.pop(ctx, false),
+                                        child: Text(l10n.cancel)),
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(ctx, true),
+                                      style: TextButton.styleFrom(foregroundColor: AppColors.warning),
+                                      child: Text(l10n.yes),
+                                    ),
+                                  ],
+                                ),
+                              );
+                              if (confirmed == true && context.mounted) {
+                                final ok = await ref
+                                    .read(adminOrdersProvider.notifier)
+                                    .cancelOrder(order.token);
+                                if (context.mounted) {
+                                  Navigator.pop(context);
+                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                      content: Text(ok ? l10n.adminOrderCancelled : l10n.adminOrderError)));
+                                }
                               }
                             },
                             style: OutlinedButton.styleFrom(
                               foregroundColor: AppColors.warning,
-                              side: const BorderSide(
-                                  color: AppColors.warning),
+                              side: const BorderSide(color: AppColors.warning),
                               minimumSize: const Size(0, 44),
                             ),
                             child: Text(l10n.adminCancelOrder),
@@ -1172,11 +1268,8 @@ class _AdminOrderDetailSheet extends ConsumerWidget {
                                   .confirmOrder(order.token);
                               if (context.mounted) {
                                 Navigator.pop(context);
-                                ScaffoldMessenger.of(context)
-                                    .showSnackBar(SnackBar(
-                                        content: Text(ok
-                                            ? l10n.adminOrderConfirmed
-                                            : l10n.adminOrderError)));
+                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                    content: Text(ok ? l10n.adminOrderConfirmed : l10n.adminOrderError)));
                               }
                             },
                             style: ElevatedButton.styleFrom(
@@ -1190,54 +1283,44 @@ class _AdminOrderDetailSheet extends ConsumerWidget {
                       ],
                     ],
                   ),
-                  if (canDelete) ...[
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: () async {
-                          final l10n = context.l10n;
-                          final ok = await showDialog<bool>(
-                            context: context,
-                            builder: (ctx) => AlertDialog(
-                              title: Text(l10n.adminDeleteOrder),
-                              content: Text(l10n.adminDeleteOrderMsg),
-                              actions: [
-                                TextButton(
-                                    onPressed: () =>
-                                        Navigator.pop(ctx, false),
-                                    child: Text(l10n.cancel)),
-                                TextButton(
-                                  onPressed: () =>
-                                      Navigator.pop(ctx, true),
-                                  style: TextButton.styleFrom(
-                                      foregroundColor: AppColors.error),
-                                  child: Text(l10n.yes),
-                                ),
-                              ],
-                            ),
-                          );
-                          if (ok == true && context.mounted) {
-                            await ref
-                                .read(adminOrdersProvider.notifier)
-                                .deleteOrder(order.id);
-                            if (context.mounted) Navigator.pop(context);
-                          }
-                        },
-                        icon: const Icon(Icons.delete_outline,
-                            color: AppColors.error),
-                        label: Text(l10n.adminDeleteOrder
-                            .replaceAll('?', '')),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.error,
-                          side:
-                              const BorderSide(color: AppColors.error),
-                          minimumSize: const Size(0, 44),
-                        ),
+                  const SizedBox(height: 8),
+                ],
+                if (canDelete)
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        final confirmed = await showDialog<bool>(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            title: Text(l10n.adminDeleteOrder),
+                            content: Text(l10n.adminDeleteOrderMsg),
+                            actions: [
+                              TextButton(
+                                  onPressed: () => Navigator.pop(ctx, false),
+                                  child: Text(l10n.cancel)),
+                              TextButton(
+                                onPressed: () => Navigator.pop(ctx, true),
+                                style: TextButton.styleFrom(foregroundColor: AppColors.error),
+                                child: Text(l10n.yes),
+                              ),
+                            ],
+                          ),
+                        );
+                        if (confirmed == true && context.mounted) {
+                          await ref.read(adminOrdersProvider.notifier).deleteOrder(order.id);
+                          if (context.mounted) Navigator.pop(context);
+                        }
+                      },
+                      icon: const Icon(Icons.delete_outline, color: AppColors.error),
+                      label: Text(l10n.adminDeleteOrder.replaceAll('?', '')),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.error,
+                        side: const BorderSide(color: AppColors.error),
+                        minimumSize: const Size(0, 44),
                       ),
                     ),
-                  ],
-                ],
+                  ),
               ],
             ),
           ),

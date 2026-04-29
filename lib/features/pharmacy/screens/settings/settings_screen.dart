@@ -75,8 +75,17 @@ class SettingsScreen extends ConsumerWidget {
                       subtitle: profile?.address,
                       onTap: () => Navigator.push(
                         context,
-                        MaterialPageRoute(
-                            builder: (_) => const LocationPickerScreen()),
+                        PageRouteBuilder(
+                          pageBuilder: (_, __, ___) => const LocationPickerScreen(),
+                          transitionsBuilder: (_, animation, __, child) =>
+                              SlideTransition(
+                                position: Tween<Offset>(
+                                  begin: const Offset(1, 0),
+                                  end: Offset.zero,
+                                ).animate(CurvedAnimation(parent: animation, curve: Curves.easeInOut)),
+                                child: child,
+                              ),
+                        ),
                       ),
                     ),
                   ],

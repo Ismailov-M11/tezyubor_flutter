@@ -120,7 +120,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
     final user = AuthUser.fromJsonString(userJson);
 
     if (token != null && user != null) {
-      state = AuthState(token: token, user: user);
+      state = AuthState(token: token, user: user, isInitialized: true);
+    } else {
+      state = const AuthState(isInitialized: true);
     }
   }
 
@@ -191,6 +193,24 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> logout() async {
     await StorageService.clear();
     state = const AuthState();
+  }
+
+  Future<void> clearRequiresLocation() async {
+    final user = state.user;
+    if (user == null) return;
+    final updated = AuthUser(
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      login: user.login,
+      role: user.role,
+      permissions: user.permissions,
+      isSuperAdmin: user.isSuperAdmin,
+      subscriptionExpiry: user.subscriptionExpiry,
+      requiresLocation: false,
+    );
+    await StorageService.setString(AppConstants.userKey, updated.toJsonString());
+    state = state.copyWith(user: updated);
   }
 
   void clearError() => state = state.copyWith(clearError: true);

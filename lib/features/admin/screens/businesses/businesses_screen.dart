@@ -6,6 +6,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/l10n/app_l10n.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/loading_overlay.dart';
+import '../../../pharmacy/screens/location/location_picker_screen.dart';
 import '../../models/admin_models.dart';
 import '../../providers/admin_provider.dart';
 
@@ -406,12 +407,6 @@ class _PharmacyCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final theme = Theme.of(context);
-    final me = ref.watch(adminMeProvider);
-    final canEdit =
-        me.isSuperAdmin || me.permissions.contains('pharmacies:edit');
-    final canDelete =
-        me.isSuperAdmin || me.permissions.contains('pharmacies:delete');
-
     final daysLeft = _daysLeft(pharmacy.subscriptionExpiry);
     final isExpiringSoon = daysLeft != null && daysLeft <= 14;
     final isExpired = daysLeft != null && daysLeft <= 0;
@@ -504,34 +499,6 @@ class _PharmacyCard extends ConsumerWidget {
                   isExpiringSoon: isExpiringSoon,
                 ),
               ],
-              if (canEdit || canDelete) ...[
-                const SizedBox(height: 10),
-                const Divider(height: 1),
-                const SizedBox(height: 6),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    if (canEdit)
-                      TextButton.icon(
-                        onPressed: () => _showEdit(context, ref),
-                        icon: const Icon(Icons.edit_outlined, size: 16),
-                        label: Text(l10n.adminEditBusiness),
-                        style: TextButton.styleFrom(
-                            foregroundColor: AppColors.primary),
-                      ),
-                    if (canDelete)
-                      TextButton.icon(
-                        onPressed: () => _delete(context, ref),
-                        icon:
-                            const Icon(Icons.delete_outline, size: 16),
-                        label: Text(
-                            l10n.adminDeleteBusiness.replaceAll('?', '')),
-                        style: TextButton.styleFrom(
-                            foregroundColor: AppColors.error),
-                      ),
-                  ],
-                ),
-              ],
             ],
           ),
         ),
@@ -565,49 +532,6 @@ class _PharmacyCard extends ConsumerWidget {
     return dt.difference(DateTime.now()).inDays;
   }
 
-  void _showEdit(BuildContext context, WidgetRef ref) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => _PharmacyFormSheet(pharmacy: pharmacy),
-    );
-  }
-
-  Future<void> _delete(BuildContext context, WidgetRef ref) async {
-    final l10n = context.l10n;
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.adminDeleteBusiness),
-        content: Text('"${pharmacy.name}"\n${l10n.adminDeleteBusinessMsg}'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: Text(l10n.cancel)),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style:
-                TextButton.styleFrom(foregroundColor: AppColors.error),
-            child: Text(l10n.yes),
-          ),
-        ],
-      ),
-    );
-    if (ok == true && context.mounted) {
-      final success =
-          await ref.read(adminPharmaciesProvider.notifier).delete(pharmacy.id);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(success
-                ? context.l10n.adminBusinessDeleted
-                : context.l10n.error)));
-      }
-    }
-  }
 }
 
 // ─── Pharmacy detail sheet ────────────────────────────────────────────────────
@@ -1110,8 +1034,31 @@ class _PharmacyFormSheetState extends ConsumerState<_PharmacyFormSheet> {
                     controller: _addressCtrl,
                     decoration: InputDecoration(
                       labelText: l10n.adminBusinessAddressLbl,
-                      prefixIcon:
-                          const Icon(Icons.location_on_outlined),
+                      prefixIcon: const Icon(Icons.location_on_outlined),
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.map_outlined,
+                            color: AppColors.primary),
+                        onPressed: () => Navigator.push(
+                          context,
+                          PageRouteBuilder(
+                            pageBuilder: (_, __, ___) => LocationPickerScreen(
+                              initialAddress: _addressCtrl.text,
+                              onAddressPicked: (addr) =>
+                                  setState(() => _addressCtrl.text = addr),
+                            ),
+                            transitionsBuilder: (_, animation, __, child) =>
+                                SlideTransition(
+                                  position: Tween<Offset>(
+                                    begin: const Offset(1, 0),
+                                    end: Offset.zero,
+                                  ).animate(CurvedAnimation(
+                                      parent: animation,
+                                      curve: Curves.easeInOut)),
+                                  child: child,
+                                ),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 12),

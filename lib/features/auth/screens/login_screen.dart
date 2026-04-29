@@ -10,15 +10,8 @@ import '../../../shared/widgets/custom_text_field.dart';
 import '../models/auth_models.dart';
 import '../providers/auth_provider.dart';
 
-class _LanguageSwitcher extends ConsumerStatefulWidget {
+class _LanguageSwitcher extends ConsumerWidget {
   const _LanguageSwitcher();
-
-  @override
-  ConsumerState<_LanguageSwitcher> createState() => _LanguageSwitcherState();
-}
-
-class _LanguageSwitcherState extends ConsumerState<_LanguageSwitcher> {
-  bool _open = false;
 
   static const _langs = [
     ('uz', "O'zbek"),
@@ -27,79 +20,43 @@ class _LanguageSwitcherState extends ConsumerState<_LanguageSwitcher> {
   ];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final current = ref.watch(localeProvider).languageCode;
-
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        IconButton(
-          icon: const Icon(Icons.language_outlined),
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
-          onPressed: () => setState(() => _open = !_open),
-          tooltip: 'Language',
-        ),
-        if (_open)
-          Positioned(
-            right: 0,
-            top: 44,
-            child: Material(
-              elevation: 8,
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                width: 140,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .outline
-                        .withValues(alpha: 0.2),
-                  ),
-                ),
-                child: Column(
-                  children: _langs.map((lang) {
-                    final isSelected = current == lang.$1;
-                    return InkWell(
-                      onTap: () {
-                        setState(() => _open = false);
-                        ref
-                            .read(localeProvider.notifier)
-                            .setLocale(Locale(lang.$1));
-                      },
-                      borderRadius: BorderRadius.circular(12),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 11),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                lang.$2,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: isSelected
-                                      ? FontWeight.w600
-                                      : FontWeight.normal,
-                                  color: isSelected
-                                      ? AppColors.primary
-                                      : null,
-                                ),
-                              ),
-                            ),
-                            if (isSelected)
-                              const Icon(Icons.check,
-                                  size: 16, color: AppColors.primary),
-                          ],
-                        ),
+    return PopupMenuButton<String>(
+      icon: Icon(
+        Icons.language_outlined,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
+      tooltip: 'Language',
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      onSelected: (code) =>
+          ref.read(localeProvider.notifier).setLocale(Locale(code)),
+      itemBuilder: (_) => _langs
+          .map(
+            (lang) => PopupMenuItem<String>(
+              value: lang.$1,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      lang.$2,
+                      style: TextStyle(
+                        fontWeight: current == lang.$1
+                            ? FontWeight.w600
+                            : FontWeight.normal,
+                        color:
+                            current == lang.$1 ? AppColors.primary : null,
                       ),
-                    );
-                  }).toList(),
-                ),
+                    ),
+                  ),
+                  if (current == lang.$1)
+                    const Icon(Icons.check,
+                        size: 16, color: AppColors.primary),
+                ],
               ),
             ),
-          ),
-      ],
+          )
+          .toList(),
     );
   }
 }

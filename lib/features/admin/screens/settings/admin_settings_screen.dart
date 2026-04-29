@@ -281,7 +281,63 @@ class _ThemeSwitcherRow extends StatelessWidget {
           fontSize: 13,
         ),
       ),
-      onTap: () => ref.read(themeModeProvider.notifier).toggle(),
+      onTap: () => _showThemePicker(context),
+    );
+  }
+
+  void _showThemePicker(BuildContext context) {
+    final current = ref.read(themeModeProvider);
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40, height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Text(l10n.theme,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            _themeOption(context, Icons.light_mode_outlined, l10n.themeLight,
+                current == ThemeMode.light, ThemeMode.light),
+            _themeOption(context, Icons.dark_mode_outlined, l10n.themeDark,
+                current == ThemeMode.dark, ThemeMode.dark),
+            _themeOption(context, Icons.brightness_auto_outlined, l10n.themeSystem,
+                current == ThemeMode.system, ThemeMode.system),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _themeOption(BuildContext context, IconData icon, String label,
+      bool selected, ThemeMode mode) {
+    return ListTile(
+      leading: Icon(icon,
+          color: selected ? AppColors.primary : Theme.of(context).colorScheme.onSurfaceVariant),
+      title: Text(label,
+          style: TextStyle(
+            fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+            color: selected ? AppColors.primary : null,
+          )),
+      trailing: selected ? const Icon(Icons.check, color: AppColors.primary) : null,
+      onTap: () {
+        ref.read(themeModeProvider.notifier).setMode(mode);
+        Navigator.pop(context);
+      },
     );
   }
 }

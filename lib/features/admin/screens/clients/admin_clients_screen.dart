@@ -4,6 +4,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/l10n/app_l10n.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/loading_overlay.dart';
+import '../../models/admin_models.dart';
 import '../../providers/admin_provider.dart';
 
 class AdminClientsScreen extends ConsumerStatefulWidget {
@@ -16,146 +17,129 @@ class AdminClientsScreen extends ConsumerStatefulWidget {
 
 class _AdminClientsScreenState extends ConsumerState<AdminClientsScreen> {
   final _searchController = TextEditingController();
-  final _minOrdersController = TextEditingController();
-  DateTime? _dateFrom;
-  DateTime? _dateTo;
+  final _searchFocus = FocusNode();
+  bool _searchVisible = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(_onSearchChanged);
+  }
 
   @override
   void dispose() {
+    _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
-    _minOrdersController.dispose();
+    _searchFocus.dispose();
     super.dispose();
   }
 
-  void _applyFilter() {
-    final minOrders = int.tryParse(_minOrdersController.text.trim());
-    final filter = AdminClientsFilter(
-      search: _searchController.text.trim().isEmpty
-          ? null
-          : _searchController.text.trim(),
-      dateFrom: _dateFrom,
-      dateTo: _dateTo,
-      minOrders: minOrders,
-    );
-    ref.read(adminClientsProvider.notifier).applyFilter(filter);
-  }
-
-  void _clearFilters() {
-    setState(() {
-      _searchController.clear();
-      _minOrdersController.clear();
-      _dateFrom = null;
-      _dateTo = null;
-    });
-    ref.read(adminClientsProvider.notifier).clearFilter();
-  }
-
-  Future<void> _pickDate(BuildContext ctx, bool isFrom) async {
-    final now = DateTime.now();
-    final picked = await showDatePicker(
-      context: ctx,
-      initialDate: (isFrom ? _dateFrom : _dateTo) ?? now,
-      firstDate: DateTime(2020),
-      lastDate: now,
-    );
-    if (picked != null) {
-      setState(() {
-        if (isFrom) {
-          _dateFrom = picked;
-        } else {
-          _dateTo = picked;
-        }
-      });
-      _applyFilter();
+  void _onSearchChanged() {
+    final text = _searchController.text.trim();
+    final current = ref.read(adminClientsProvider).filter;
+    if (text.length >= 2 || text.isEmpty) {
+      ref.read(adminClientsProvider.notifier).applyFilter(
+            current.copyWith(
+              search: text.isEmpty ? null : text,
+              clearSearch: text.isEmpty,
+            ),
+          );
     }
+  }
+
+  void _toggleSearch() {
+    setState(() => _searchVisible = !_searchVisible);
+    if (_searchVisible) {
+      Future.delayed(const Duration(milliseconds: 80),
+          () => _searchFocus.requestFocus());
+    } else {
+      _searchFocus.unfocus();
+      if (_searchController.text.isNotEmpty) {
+        _searchController.clear();
+      }
+    }
+  }
+
+  int _activeFilterCount(AdminClientsFilter f) {
+    int c = 0;
+    if (f.dateFrom != null) c++;
+    if (f.dateTo != null) c++;
+    if (f.minOrders != null && f.minOrders! > 0) c++;
+    return c;
+  }
+
+  void _openFilterSheet() {
+    final current = ref.read(adminClientsProvider).filter;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _ClientFilterSheet(
+        initial: current,
+        onApply: (f) {
+          final withSearch = f.copyWith(
+            search: current.search,
+          );
+          ref.read(adminClientsProvider.notifier).applyFilter(withSearch);
+        },
+        onClear: () => ref.read(adminClientsProvider.notifier).applyFilter(
+              AdminClientsFilter(search: current.search),
+            ),
+      ),
+    );
+  }
+
+  void _showDetail(AdminClient client) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _ClientDetailSheet(client: client),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final state = ref.watch(adminClientsProvider);
-    final isFiltered = state.filter.isActive;
+    final filterCount = _activeFilterCount(state.filter);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.adminClientsTitle),
+        title: _searchVisible
+            ? TextField(
+                controller: _searchController,
+                focusNode: _searchFocus,
+                decoration: InputDecoration(
+                  hintText: l10n.adminSearchClients,
+                  border: InputBorder.none,
+                  hintStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.5),
+                      ),
+                ),
+                style: Theme.of(context).textTheme.bodyMedium,
+              )
+            : Text(l10n.adminClientsTitle),
         actions: [
-          if (isFiltered)
-            TextButton(
-              onPressed: _clearFilters,
-              child: Text(l10n.clear,
-                  style: const TextStyle(color: AppColors.primary)),
-            ),
-        ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(100),
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: l10n.adminSearchClients,
-                    prefixIcon: const Icon(Icons.search, size: 20),
-                    isDense: true,
-                    suffixIcon: _searchController.text.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear, size: 18),
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() {});
-                              _applyFilter();
-                            },
-                          )
-                        : null,
-                  ),
-                  onChanged: (v) {
-                    setState(() {});
-                    if (v.length >= 3 || v.isEmpty) _applyFilter();
-                  },
-                ),
-              ),
-              // Filter chips
-              SizedBox(
-                height: 40,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  children: [
-                    _FilterChip(
-                      icon: Icons.calendar_today_outlined,
-                      label: _dateFrom != null
-                          ? '${_dateFrom!.day}.${_dateFrom!.month}.${_dateFrom!.year}'
-                          : l10n.from,
-                      isActive: _dateFrom != null,
-                      onTap: () => _pickDate(context, true),
-                    ),
-                    const SizedBox(width: 8),
-                    _FilterChip(
-                      icon: Icons.calendar_today_outlined,
-                      label: _dateTo != null
-                          ? '${_dateTo!.day}.${_dateTo!.month}.${_dateTo!.year}'
-                          : l10n.to,
-                      isActive: _dateTo != null,
-                      onTap: () => _pickDate(context, false),
-                    ),
-                    const SizedBox(width: 8),
-                    _FilterChip(
-                      icon: Icons.receipt_long_outlined,
-                      label: _minOrdersController.text.isNotEmpty
-                          ? '${l10n.adminMinOrders}: ${_minOrdersController.text}'
-                          : l10n.adminMinOrders,
-                      isActive: _minOrdersController.text.isNotEmpty,
-                      onTap: () => _showMinOrdersDialog(context, l10n),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 4),
-            ],
+          IconButton(
+            icon: Icon(_searchVisible ? Icons.close : Icons.search),
+            tooltip: l10n.adminSearchClients,
+            onPressed: _toggleSearch,
           ),
-        ),
+          Badge(
+            isLabelVisible: filterCount > 0,
+            label: Text('$filterCount'),
+            backgroundColor: AppColors.primary,
+            child: IconButton(
+              icon: const Icon(Icons.filter_list_rounded),
+              onPressed: _openFilterSheet,
+            ),
+          ),
+          const SizedBox(width: 4),
+        ],
       ),
       body: state.isLoading && state.clients.isEmpty
           ? const CenteredLoader()
@@ -177,112 +161,586 @@ class _AdminClientsScreenState extends ConsumerState<AdminClientsScreen> {
                       child: ListView.separated(
                         padding: const EdgeInsets.all(16),
                         itemCount: state.clients.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 8),
-                        itemBuilder: (_, i) {
-                          final c = state.clients[i];
-                          return Card(
-                            child: ListTile(
-                              contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 14, vertical: 6),
-                              leading: CircleAvatar(
-                                backgroundColor:
-                                    AppColors.primary.withValues(alpha: 0.1),
-                                child: Text(
-                                  c.name?.isNotEmpty == true
-                                      ? c.name![0].toUpperCase()
-                                      : (c.phone.isNotEmpty
-                                          ? c.phone[0]
-                                          : '?'),
-                                  style: const TextStyle(
-                                    color: AppColors.primary,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                              title: Text(
-                                c.name ?? c.phone,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium
-                                    ?.copyWith(fontWeight: FontWeight.w600),
-                              ),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (c.name != null)
-                                    Text(c.phone,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodySmall),
-                                  if (c.pharmacies.isNotEmpty)
-                                    Text(
-                                      c.pharmacies.join(', '),
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodySmall
-                                          ?.copyWith(
-                                              color: AppColors.primary
-                                                  .withValues(alpha: 0.8)),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                ],
-                              ),
-                              trailing: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Text(
-                                    '${c.ordersCount}',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleSmall
-                                        ?.copyWith(color: AppColors.primary),
-                                  ),
-                                  Text(
-                                    l10n.adminClientsOrders,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodySmall,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
+                        separatorBuilder: (_, __) =>
+                            const SizedBox(height: 8),
+                        itemBuilder: (_, i) => _ClientCard(
+                          client: state.clients[i],
+                          onTap: () => _showDetail(state.clients[i]),
+                        ),
                       ),
                     ),
     );
   }
+}
 
-  void _showMinOrdersDialog(BuildContext context, AppL10n l10n) {
-    final ctrl = TextEditingController(text: _minOrdersController.text);
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.adminMinOrders),
-        content: TextField(
-          controller: ctrl,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(hintText: '2'),
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              setState(() => _minOrdersController.clear());
-              Navigator.pop(ctx);
-              _applyFilter();
-            },
-            child: Text(l10n.clear),
+// ─── Client Card ──────────────────────────────────────────────────────────────
+
+class _ClientCard extends StatelessWidget {
+  final AdminClient client;
+  final VoidCallback onTap;
+
+  const _ClientCard({required this.client, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final initials = client.name?.isNotEmpty == true
+        ? client.name![0].toUpperCase()
+        : (client.phone.isNotEmpty ? client.phone[0] : '?');
+
+    return Card(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                child: Text(
+                  initials,
+                  style: const TextStyle(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      client.name ?? client.phone,
+                      style: theme.textTheme.bodyMedium
+                          ?.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                    if (client.name != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        client.phone,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color:
+                              theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                        ),
+                      ),
+                    ],
+                    if (client.pharmacies.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        client.pharmacies.join(', '),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: AppColors.primary.withValues(alpha: 0.85),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '${client.ordersCount}',
+                    style: theme.textTheme.titleSmall
+                        ?.copyWith(color: AppColors.primary),
+                  ),
+                  Text(
+                    l10n.adminClientsOrders,
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ],
+              ),
+              const SizedBox(width: 4),
+              Icon(
+                Icons.chevron_right,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                size: 20,
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () {
-              setState(() => _minOrdersController.text = ctrl.text);
-              Navigator.pop(ctx);
-              _applyFilter();
-            },
-            child: Text(l10n.apply),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Client Detail Sheet ──────────────────────────────────────────────────────
+
+class _ClientDetailSheet extends StatelessWidget {
+  final AdminClient client;
+
+  const _ClientDetailSheet({required this.client});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final initials = client.name?.isNotEmpty == true
+        ? client.name![0].toUpperCase()
+        : (client.phone.isNotEmpty ? client.phone[0] : '?');
+
+    String? formattedLastOrder;
+    if (client.lastOrderAt != null) {
+      try {
+        final dt = DateTime.parse(client.lastOrderAt!).toLocal();
+        formattedLastOrder =
+            '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}';
+      } catch (_) {
+        formattedLastOrder = client.lastOrderAt;
+      }
+    }
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.6,
+      minChildSize: 0.4,
+      maxChildSize: 0.9,
+      expand: false,
+      builder: (_, scrollController) => Container(
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.outline.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Header
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 28,
+                    backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                    child: Text(
+                      initials,
+                      style: const TextStyle(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (client.name != null)
+                          Text(
+                            client.name!,
+                            style: theme.textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                          ),
+                        Text(
+                          client.phone,
+                          style: client.name != null
+                              ? theme.textTheme.bodyMedium?.copyWith(
+                                  color: theme.colorScheme.onSurface
+                                      .withValues(alpha: 0.65),
+                                )
+                              : theme.textTheme.titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Divider(height: 1),
+            Expanded(
+              child: ListView(
+                controller: scrollController,
+                padding: const EdgeInsets.all(20),
+                children: [
+                  // Stats row
+                  Row(
+                    children: [
+                      _StatTile(
+                        icon: Icons.receipt_long_outlined,
+                        label: l10n.adminClientsOrders,
+                        value: '${client.ordersCount}',
+                      ),
+                      const SizedBox(width: 12),
+                      _StatTile(
+                        icon: Icons.access_time_outlined,
+                        label: l10n.adminClientLastOrder,
+                        value: formattedLastOrder ?? '—',
+                      ),
+                    ],
+                  ),
+
+                  if (client.pharmacies.isNotEmpty) ...[
+                    const SizedBox(height: 20),
+                    _SectionHeader(
+                      icon: Icons.store_outlined,
+                      title: l10n.adminClientCompanies,
+                      count: client.pharmacies.length,
+                    ),
+                    const SizedBox(height: 8),
+                    ...client.pharmacies.map(
+                      (p) => _InfoRow(
+                        icon: Icons.store_mall_directory_outlined,
+                        text: p,
+                      ),
+                    ),
+                  ],
+
+                  if (client.addresses.isNotEmpty) ...[
+                    const SizedBox(height: 20),
+                    _SectionHeader(
+                      icon: Icons.location_on_outlined,
+                      title: l10n.adminClientAddresses,
+                      count: client.addresses.length,
+                    ),
+                    const SizedBox(height: 8),
+                    ...client.addresses.map(
+                      (a) => _InfoRow(
+                        icon: Icons.place_outlined,
+                        text: a,
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Filter Sheet ─────────────────────────────────────────────────────────────
+
+class _ClientFilterSheet extends StatefulWidget {
+  final AdminClientsFilter initial;
+  final ValueChanged<AdminClientsFilter> onApply;
+  final VoidCallback onClear;
+
+  const _ClientFilterSheet({
+    required this.initial,
+    required this.onApply,
+    required this.onClear,
+  });
+
+  @override
+  State<_ClientFilterSheet> createState() => _ClientFilterSheetState();
+}
+
+class _ClientFilterSheetState extends State<_ClientFilterSheet> {
+  late DateTime? _dateFrom;
+  late DateTime? _dateTo;
+  final _minOrdersController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _dateFrom = widget.initial.dateFrom;
+    _dateTo = widget.initial.dateTo;
+    _minOrdersController.text =
+        widget.initial.minOrders?.toString() ?? '';
+  }
+
+  @override
+  void dispose() {
+    _minOrdersController.dispose();
+    super.dispose();
+  }
+
+  int get _activeCount {
+    int c = 0;
+    if (_dateFrom != null) c++;
+    if (_dateTo != null) c++;
+    if (_minOrdersController.text.trim().isNotEmpty) c++;
+    return c;
+  }
+
+  Future<void> _pickDate(bool isFrom) async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: (isFrom ? _dateFrom : _dateTo) ?? now,
+      firstDate: DateTime(2020),
+      lastDate: now,
+    );
+    if (picked != null) setState(() => isFrom ? _dateFrom = picked : _dateTo = picked);
+  }
+
+  String _fmtDate(DateTime dt) =>
+      '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}';
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Container(
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius:
+              const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.outline.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Text(
+                  l10n.filter,
+                  style: theme.textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                const Spacer(),
+                if (_activeCount > 0)
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      widget.onClear();
+                    },
+                    child: Text(l10n.clear,
+                        style:
+                            const TextStyle(color: AppColors.primary)),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Date range
+            Text(
+              '${l10n.from} — ${l10n.to}',
+              style: theme.textTheme.labelMedium?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: _DateButton(
+                    label: _dateFrom != null
+                        ? _fmtDate(_dateFrom!)
+                        : l10n.from,
+                    isSet: _dateFrom != null,
+                    onTap: () => _pickDate(true),
+                    onClear: _dateFrom != null
+                        ? () => setState(() => _dateFrom = null)
+                        : null,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _DateButton(
+                    label: _dateTo != null ? _fmtDate(_dateTo!) : l10n.to,
+                    isSet: _dateTo != null,
+                    onTap: () => _pickDate(false),
+                    onClear:
+                        _dateTo != null ? () => setState(() => _dateTo = null) : null,
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+
+            // Min orders
+            Text(
+              l10n.adminMinOrders,
+              style: theme.textTheme.labelMedium?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _minOrdersController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                hintText: '2',
+                isDense: true,
+                prefixIcon: const Icon(Icons.receipt_long_outlined, size: 18),
+                suffixIcon: _minOrdersController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, size: 16),
+                        onPressed: () =>
+                            setState(() => _minOrdersController.clear()),
+                      )
+                    : null,
+              ),
+              onChanged: (_) => setState(() {}),
+            ),
+
+            const SizedBox(height: 24),
+
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: () {
+                  final minOrders =
+                      int.tryParse(_minOrdersController.text.trim());
+                  Navigator.pop(context);
+                  widget.onApply(AdminClientsFilter(
+                    dateFrom: _dateFrom,
+                    dateTo: _dateTo,
+                    minOrders: minOrders,
+                  ));
+                },
+                child: Text(l10n.apply),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+class _StatTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _StatTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerHighest
+              .withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, size: 18, color: AppColors.primary),
+            const SizedBox(height: 6),
+            Text(
+              value,
+              style: theme.textTheme.titleSmall
+                  ?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            Text(
+              label,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final int count;
+
+  const _SectionHeader({
+    required this.icon,
+    required this.title,
+    required this.count,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: AppColors.primary),
+        const SizedBox(width: 6),
+        Text(
+          title,
+          style: theme.textTheme.labelLarge
+              ?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(width: 6),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+          decoration: BoxDecoration(
+            color: AppColors.primary.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Text(
+            '$count',
+            style: const TextStyle(
+              fontSize: 11,
+              color: AppColors.primary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  final IconData icon;
+  final String text;
+
+  const _InfoRow({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 16,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.45)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: theme.textTheme.bodyMedium,
+            ),
           ),
         ],
       ),
@@ -290,17 +748,17 @@ class _AdminClientsScreenState extends ConsumerState<AdminClientsScreen> {
   }
 }
 
-class _FilterChip extends StatelessWidget {
-  final IconData icon;
+class _DateButton extends StatelessWidget {
   final String label;
-  final bool isActive;
+  final bool isSet;
   final VoidCallback onTap;
+  final VoidCallback? onClear;
 
-  const _FilterChip({
-    required this.icon,
+  const _DateButton({
     required this.label,
-    required this.isActive,
+    required this.isSet,
     required this.onTap,
+    this.onClear,
   });
 
   @override
@@ -308,39 +766,48 @@ class _FilterChip extends StatelessWidget {
     final theme = Theme.of(context);
     return GestureDetector(
       onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: isActive
-              ? AppColors.primary.withValues(alpha: 0.12)
+          color: isSet
+              ? AppColors.primary.withValues(alpha: 0.08)
               : theme.colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: isActive
-                ? AppColors.primary
+            color: isSet
+                ? AppColors.primary.withValues(alpha: 0.4)
                 : theme.colorScheme.outline.withValues(alpha: 0.3),
           ),
         ),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon,
-                size: 14,
-                color: isActive
-                    ? AppColors.primary
-                    : theme.colorScheme.onSurfaceVariant),
-            const SizedBox(width: 5),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: isActive
-                    ? AppColors.primary
-                    : theme.colorScheme.onSurfaceVariant,
+            Icon(
+              Icons.calendar_today_outlined,
+              size: 14,
+              color: isSet
+                  ? AppColors.primary
+                  : theme.colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: isSet
+                      ? AppColors.primary
+                      : theme.colorScheme.onSurfaceVariant,
+                  fontWeight: isSet ? FontWeight.w500 : FontWeight.normal,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
+            if (onClear != null)
+              GestureDetector(
+                onTap: onClear,
+                child: const Icon(Icons.close,
+                    size: 14, color: AppColors.primary),
+              ),
           ],
         ),
       ),

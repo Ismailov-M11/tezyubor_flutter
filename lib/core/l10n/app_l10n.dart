@@ -275,6 +275,65 @@ class AppL10n {
 
   // Admin — activations screen
   String get adminActivationsTitle => _t('Активации', 'Aktivatsiyalar', 'Activations');
+  String get adminActivationSearch => _t('Поиск по магазину...', "Do'kon bo'yicha...", 'Search by store...');
+  String get adminActivationSelfRegistered => _t('Самостоятельно', "O'zi ro'yxatdan o'tgan", 'Self-registered');
+  String get adminActivationSuperAdmin => _t('Суперадмин', 'Superadmin', 'Superadmin');
+  String get adminActivationByUser => _t('Пользователь', 'Foydalanuvchi', 'User');
+  String get adminActivationWhoAdded => _t('Кто добавил', "Kim qo'shdi", 'Who added');
+  String get adminActivationCreator => _t('Добавил', "Qo'shdi", 'Added by');
+  String get adminActivationReassign => _t('Переназначить', "Qayta tayinlash", 'Reassign');
+  String get adminActivationReassigned => _t('Переназначено', "Qayta tayinlandi", 'Reassigned');
+  String get adminActivationTotal => _t('Всего', 'Jami', 'Total');
+  String get adminActivationStatusFilter => _t('Статус магазина', "Do'kon holati", 'Store status');
+  String get adminActivationDateAdded => _t('Дата добавления', "Qo'shilgan sana", 'Date added');
+  String get adminActivationAnalytics => _t('Аналитика', 'Analitika', 'Analytics');
+  String get adminActivationList => _t('Список', "Ro'yxat", 'List');
+
+  // Language
+  String get langUz => "O'zbek";
+  String get langRu => _t('Русский', 'Rus tili', 'Russian');
+  String get langEn => _t('English', 'Ingliz tili', 'English');
+  String get changeLanguage => _t('Язык', 'Til', 'Language');
+
+  // Admin orders — additional
+  String get adminCancelOrder => _t('Отменить заказ', 'Buyurtmani bekor qilish', 'Cancel Order');
+  String get adminOrderCancelled => _t('Заказ отменён', 'Buyurtma bekor qilindi', 'Order cancelled');
+  String get adminCreateOrder => _t('Создать заказ', 'Buyurtma yaratish', 'Create Order');
+  String get adminCreateOrderTitle => _t("Новый заказ (от магазина)", "Yangi buyurtma (do'kon nomidan)", 'New Order (from store)');
+  String get adminSelectPharmacy => _t("Выберите магазин", "Do'kon tanlang", 'Select store');
+  String get adminOrderCreated => _t('Заказ создан', 'Buyurtma yaratildi', 'Order created');
+  String get adminOrderDetailTitle => _t('Детали заказа', 'Buyurtma tafsilotlari', 'Order Details');
+  String get adminPharmacyLbl => _t('Магазин', "Do'kon", 'Store');
+
+  // Admin businesses — additional
+  String get adminCreateBusiness => _t("Создать магазин", "Do'kon yaratish", 'Create Business');
+  String get adminEditBusiness => _t('Редактировать', 'Tahrirlash', 'Edit');
+  String get adminDeleteBusiness => _t("Удалить магазин?", "Do'konni o'chirish?", 'Delete business?');
+  String get adminDeleteBusinessMsg => _t("Это действие нельзя отменить.", "Bu amal qaytarib bo'lmaydi.", 'This cannot be undone.');
+  String get adminBusinessCreated => _t("Магазин создан", "Do'kon yaratildi", 'Business created');
+  String get adminBusinessUpdated => _t("Магазин обновлён", "Do'kon yangilandi", 'Business updated');
+  String get adminBusinessDeleted => _t("Магазин удалён", "Do'kon o'chirildi", 'Business deleted');
+  String get adminBusinessOwner => _t('Владелец', 'Egasi', 'Owner');
+  String get adminBusinessPhoneLbl => _t('Телефон', 'Telefon', 'Phone');
+  String get adminBusinessLoginLbl => _t('Логин', 'Login', 'Login');
+  String get adminBusinessPasswordLbl => _t('Пароль', 'Parol', 'Password');
+  String get adminBusinessAddressLbl => _t('Адрес', 'Manzil', 'Address');
+  String get adminBusinessSubExpiry => _t('Дата окончания подписки', 'Obuna tugash sanasi', 'Subscription expiry');
+  String get adminBusinessCouriers => _t("Разрешённые курьеры", "Ruxsat etilgan kuryerlar", 'Allowed couriers');
+  String get adminBusinessStatusFilter => _t('Статус', 'Holat', 'Status');
+  String get adminBusinessDetail => _t('Информация о магазине', "Do'kon haqida ma'lumot", 'Store details');
+
+  // Admin clients — additional
+  String get adminClientAddresses => _t('Адреса', 'Manzillar', 'Addresses');
+  String get adminClientCompanies => _t("Магазины", "Do'konlar", 'Stores');
+  String get adminClientLastOrder => _t('Последний заказ', 'Oxirgi buyurtma', 'Last order');
+
+  // Permission sections
+  String get permSectionOrders => _t('Заказы', 'Buyurtmalar', 'Orders');
+  String get permSectionPharmacies => _t("Магазины", "Do'konlar", 'Businesses');
+  String get permSectionClients => _t('Клиенты', 'Mijozlar', 'Clients');
+  String get permSectionAnalytics => _t('Аналитика', 'Analitika', 'Analytics');
+  String get permSectionActivations => _t('Активации', 'Aktivatsiyalar', 'Activations');
 
   // Admin — roles screen
   String get adminRolesTitle => _t('Управление ролями', 'Rollarni boshqarish', 'Role Management');

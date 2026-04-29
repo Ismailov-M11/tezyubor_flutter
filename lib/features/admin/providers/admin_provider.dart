@@ -241,6 +241,33 @@ class AdminOrdersNotifier extends StateNotifier<AdminOrdersState> {
       return false;
     }
   }
+
+  Future<bool> createOrder({
+    required String pharmacyId,
+    String? comment,
+    double? medicinesTotal,
+    String? customerPhone,
+    String? customerName,
+  }) async {
+    try {
+      final data = <String, dynamic>{'pharmacyId': pharmacyId};
+      if (comment != null && comment.isNotEmpty) {
+        data['pharmacyComment'] = comment;
+      }
+      if (medicinesTotal != null) data['medicinesTotal'] = medicinesTotal;
+      if (customerPhone != null && customerPhone.isNotEmpty) {
+        data['customerPhone'] = customerPhone;
+      }
+      if (customerName != null && customerName.isNotEmpty) {
+        data['customerName'] = customerName;
+      }
+      await ApiClient.instance.post('/admin/orders', data: data);
+      await load();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
 }
 
 final adminOrdersProvider =
@@ -300,6 +327,72 @@ class AdminPharmaciesNotifier extends StateNotifier<AdminPharmaciesState> {
       state = state.copyWith(isLoading: false, error: _dioError(e));
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
+    }
+  }
+
+  Future<bool> create({
+    required String name,
+    required String phone,
+    required String login,
+    required String password,
+    required String subscriptionExpiry,
+    String? ownerName,
+    String? address,
+    String? allowedCouriers,
+  }) async {
+    try {
+      final data = <String, dynamic>{
+        'name': name,
+        'phone': phone,
+        'login': login,
+        'password': password,
+        'subscriptionExpiry': subscriptionExpiry,
+      };
+      if (ownerName != null && ownerName.isNotEmpty) data['ownerName'] = ownerName;
+      if (address != null && address.isNotEmpty) data['address'] = address;
+      if (allowedCouriers != null && allowedCouriers.isNotEmpty) {
+        data['allowedCouriers'] = allowedCouriers;
+      }
+      await ApiClient.instance.post('/admin/pharmacies', data: data);
+      await load();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> update(
+    String id, {
+    String? name,
+    String? ownerName,
+    String? address,
+    String? phone,
+    String? subscriptionExpiry,
+    bool? isActive,
+    String? login,
+    String? newPassword,
+    String? allowedCouriers,
+  }) async {
+    try {
+      final data = <String, dynamic>{};
+      if (name != null) data['name'] = name;
+      if (ownerName != null) data['ownerName'] = ownerName;
+      if (address != null) data['address'] = address;
+      if (phone != null) data['phone'] = phone;
+      if (subscriptionExpiry != null) {
+        data['subscriptionExpiry'] = subscriptionExpiry;
+      }
+      if (isActive != null) data['isActive'] = isActive;
+      if (login != null && login.isNotEmpty) data['login'] = login;
+      if (newPassword != null && newPassword.isNotEmpty) {
+        data['newPassword'] = newPassword;
+      }
+      if (allowedCouriers != null) data['allowedCouriers'] = allowedCouriers;
+      await ApiClient.instance.put('/admin/pharmacies/$id', data: data);
+      await load();
+      return true;
+    } catch (_) {
+      return false;
     }
   }
 
@@ -493,25 +586,33 @@ final adminClientsProvider =
 
 class AdminActivationsState {
   final List<AdminActivation> activations;
+  final AdminActivationStats stats;
   final bool isLoading;
   final String? error;
+  final AdminActivationsFilter filter;
 
   const AdminActivationsState({
     this.activations = const [],
+    this.stats = const AdminActivationStats(),
     this.isLoading = false,
     this.error,
+    this.filter = const AdminActivationsFilter(),
   });
 
   AdminActivationsState copyWith({
     List<AdminActivation>? activations,
+    AdminActivationStats? stats,
     bool? isLoading,
     String? error,
+    AdminActivationsFilter? filter,
     bool clearError = false,
   }) =>
       AdminActivationsState(
         activations: activations ?? this.activations,
+        stats: stats ?? this.stats,
         isLoading: isLoading ?? this.isLoading,
         error: clearError ? null : error ?? this.error,
+        filter: filter ?? this.filter,
       );
 }
 
@@ -520,10 +621,25 @@ class AdminActivationsNotifier extends StateNotifier<AdminActivationsState> {
     load();
   }
 
-  Future<void> load() async {
-    state = state.copyWith(isLoading: true, clearError: true);
+  Future<void> load({AdminActivationsFilter? filter}) async {
+    final f = filter ?? state.filter;
+    state = state.copyWith(isLoading: true, clearError: true, filter: f);
     try {
-      final response = await ApiClient.instance.get('/admin/activations');
+      final params = <String, dynamic>{};
+      if (f.search != null && f.search!.isNotEmpty) {
+        params['search'] = f.search;
+      }
+      if (f.creatorType != null) params['creatorType'] = f.creatorType;
+      if (f.status != null) params['status'] = f.status;
+      if (f.dateFrom != null) {
+        params['dateFrom'] = f.dateFrom!.toIso8601String().split('T')[0];
+      }
+      if (f.dateTo != null) {
+        params['dateTo'] = f.dateTo!.toIso8601String().split('T')[0];
+      }
+
+      final response = await ApiClient.instance.get('/admin/activations',
+          params: params.isEmpty ? null : params);
       final body = response.data as Map<String, dynamic>;
       final data = (body['data'] ?? body) as Map<String, dynamic>;
       final rawList =
@@ -532,11 +648,39 @@ class AdminActivationsNotifier extends StateNotifier<AdminActivationsState> {
       final list = rawList
           .map((e) => AdminActivation.fromJson(e as Map<String, dynamic>))
           .toList();
-      state = state.copyWith(activations: list, isLoading: false);
+      final stats = AdminActivationStats.fromJson(data);
+      state = state.copyWith(activations: list, stats: stats, isLoading: false);
     } on DioException catch (e) {
       state = state.copyWith(isLoading: false, error: _dioError(e));
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
+    }
+  }
+
+  Future<void> applyFilter(AdminActivationsFilter filter) =>
+      load(filter: filter);
+
+  Future<void> clearFilter() =>
+      load(filter: const AdminActivationsFilter());
+
+  Future<bool> reassign(
+    String pharmacyId, {
+    String? createdById,
+    bool selfRegistered = false,
+  }) async {
+    try {
+      final data = <String, dynamic>{
+        'selfRegistered': selfRegistered,
+        'createdById': createdById,
+      };
+      await ApiClient.instance.put(
+        '/admin/pharmacies/$pharmacyId/creator',
+        data: data,
+      );
+      await load();
+      return true;
+    } catch (_) {
+      return false;
     }
   }
 }

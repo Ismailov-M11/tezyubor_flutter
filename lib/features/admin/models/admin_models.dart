@@ -156,25 +156,109 @@ class AdminDailyOrders {
 class AdminActivation {
   final String id;
   final String pharmacyName;
+  final String login;
+  final String? phone;
+  final bool selfRegistered;
   final String? createdByName;
+  final String? createdById;
   final String createdAt;
   final bool isActive;
+  final String? subscriptionExpiry;
 
   const AdminActivation({
     required this.id,
     required this.pharmacyName,
+    this.login = '',
+    this.phone,
+    this.selfRegistered = false,
     this.createdByName,
+    this.createdById,
     required this.createdAt,
     required this.isActive,
+    this.subscriptionExpiry,
   });
 
   factory AdminActivation.fromJson(Map<String, dynamic> json) =>
       AdminActivation(
         id: json['id']?.toString() ?? '',
         pharmacyName: json['name'] as String? ?? '',
+        login: json['login'] as String? ?? '',
+        phone: json['phone'] as String?,
+        selfRegistered: json['selfRegistered'] as bool? ?? false,
         createdByName: json['createdBy']?['name'] as String?,
+        createdById: json['createdById'] as String?,
         createdAt: json['createdAt'] as String? ?? '',
         isActive: json['isActive'] as bool? ?? true,
+        subscriptionExpiry: json['subscriptionExpiry'] as String?,
+      );
+}
+
+class AdminActivationStats {
+  final int total;
+  final int selfRegisteredCount;
+  final int superAdminCount;
+  final List<Map<String, dynamic>> byUser;
+
+  const AdminActivationStats({
+    this.total = 0,
+    this.selfRegisteredCount = 0,
+    this.superAdminCount = 0,
+    this.byUser = const [],
+  });
+
+  factory AdminActivationStats.fromJson(Map<String, dynamic> json) =>
+      AdminActivationStats(
+        total: (json['total'] as num?)?.toInt() ?? 0,
+        selfRegisteredCount:
+            (json['selfRegisteredCount'] as num?)?.toInt() ?? 0,
+        superAdminCount: (json['superAdminCount'] as num?)?.toInt() ?? 0,
+        byUser: (json['byUser'] as List?)
+                ?.map((e) => Map<String, dynamic>.from(e as Map))
+                .toList() ??
+            [],
+      );
+}
+
+class AdminActivationsFilter {
+  final String? search;
+  final String? creatorType; // 'self', 'superadmin', 'user'
+  final String? status; // 'active', 'inactive'
+  final DateTime? dateFrom;
+  final DateTime? dateTo;
+
+  const AdminActivationsFilter({
+    this.search,
+    this.creatorType,
+    this.status,
+    this.dateFrom,
+    this.dateTo,
+  });
+
+  bool get isActive =>
+      (search != null && search!.isNotEmpty) ||
+      creatorType != null ||
+      status != null ||
+      dateFrom != null ||
+      dateTo != null;
+
+  AdminActivationsFilter copyWith({
+    String? search,
+    String? creatorType,
+    String? status,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    bool clearSearch = false,
+    bool clearCreatorType = false,
+    bool clearStatus = false,
+    bool clearDates = false,
+  }) =>
+      AdminActivationsFilter(
+        search: clearSearch ? null : search ?? this.search,
+        creatorType:
+            clearCreatorType ? null : creatorType ?? this.creatorType,
+        status: clearStatus ? null : status ?? this.status,
+        dateFrom: clearDates ? null : dateFrom ?? this.dateFrom,
+        dateTo: clearDates ? null : dateTo ?? this.dateTo,
       );
 }
 

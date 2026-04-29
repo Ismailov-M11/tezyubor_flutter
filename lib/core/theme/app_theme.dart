@@ -179,7 +179,7 @@ class AppTheme {
         ),
         clipBehavior: Clip.antiAlias,
       ),
-      dialogTheme: DialogTheme(
+      dialogTheme: DialogThemeData(
         backgroundColor: bg,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         elevation: 8,

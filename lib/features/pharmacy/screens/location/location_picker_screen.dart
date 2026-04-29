@@ -245,8 +245,8 @@ class _LocationPickerScreenState extends ConsumerState<LocationPickerScreen> {
       });
       await ref.read(pharmacyProfileProvider.notifier).load();
       if (widget.isSetupMode) {
-        // Clear the flag — router will redirect to /pharmacy/orders
         await ref.read(authStateProvider.notifier).clearRequiresLocation();
+        if (mounted) setState(() => _isSaving = false);
         return;
       }
       if (mounted) {

@@ -43,9 +43,6 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
       builder: (_) => _ClientFilterSheet(
         current: current,
         onApply: (f) => ref.read(clientsProvider.notifier).applyFilter(f),
@@ -58,9 +55,6 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
       builder: (_) => _ClientDetailSheet(client: client),
     );
   }
@@ -181,9 +175,9 @@ class _ClientCard extends StatelessWidget {
     final c = client;
 
     return Card(
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
         child: ListTile(
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 14, vertical: 4),

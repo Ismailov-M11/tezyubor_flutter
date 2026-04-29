@@ -31,12 +31,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         return '/pharmacy';
       }
       if (!isLoggedIn && isSplash) return '/login';
-      // Redirect pharmacy user to location setup if flag is still set
+      // Удерживаем на экране выбора локации пока флаг не снят
       if (isLoggedIn &&
           authState.user?.role == UserRole.pharmacy &&
           authState.user?.requiresLocation == true &&
           loc != '/pharmacy/location-setup') {
         return '/pharmacy/location-setup';
+      }
+      // Локация сохранена — уходим с экрана настройки на заказы
+      if (isLoggedIn &&
+          authState.user?.role == UserRole.pharmacy &&
+          authState.user?.requiresLocation != true &&
+          loc == '/pharmacy/location-setup') {
+        return '/pharmacy/orders';
       }
       return null;
     },

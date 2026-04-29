@@ -192,7 +192,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<void> logout() async {
     await StorageService.clear();
-    state = const AuthState();
+    state = const AuthState(); // isInitialized: false → роутер показывает splash
+    await Future.delayed(const Duration(milliseconds: 1000));
+    state = const AuthState(isInitialized: true); // → роутер видит !isLoggedIn → /login
   }
 
   Future<void> clearRequiresLocation() async {

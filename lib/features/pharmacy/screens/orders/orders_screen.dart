@@ -103,9 +103,6 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
       builder: (_) => const CreateOrderSheet(),
     );
   }
@@ -136,9 +133,6 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
       builder: (ctx) => _OrderFilterSheet(
         current: current,
         onApply: (f) => ref.read(ordersProvider.notifier).applyFilter(f),
@@ -152,9 +146,6 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
       builder: (_) => _OrderDetailSheet(order: order),
     );
   }
@@ -444,138 +435,154 @@ class _OrderCard extends ConsumerWidget {
     final total = order.totalPrice ??
         ((order.medicinesTotal ?? 0.0) + (order.deliveryPrice ?? 0.0));
 
+    final statusColor = StatusBadge.colorFor(order.status);
+
     return Card(
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Token + Status
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      '#${order.token.toUpperCase()}',
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'monospace',
-                        fontSize: 12,
+              Container(width: 4, color: statusColor),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Token + Status
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '#${order.token.toUpperCase()}',
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'monospace',
+                                fontSize: 12,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          StatusBadge(status: order.status),
+                        ],
                       ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  StatusBadge(status: order.status),
-                ],
-              ),
 
-              // Comment preview
-              if (order.pharmacyComment != null &&
-                  order.pharmacyComment!.isNotEmpty) ...[
-                const SizedBox(height: 6),
-                Text(
-                  order.pharmacyComment!,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-
-              // Customer
-              if (order.customerName != null ||
-                  order.customerPhone != null) ...[
-                const SizedBox(height: 5),
-                _CardRow(
-                  icon: Icons.person_outline,
-                  value: [order.customerName, order.customerPhone]
-                      .where((e) => e != null)
-                      .join(' · '),
-                ),
-              ],
-
-              // Customer address
-              if (order.customerAddress != null) ...[
-                const SizedBox(height: 3),
-                _CardRow(
-                  icon: Icons.location_on_outlined,
-                  value: order.customerAddress!,
-                  truncate: true,
-                ),
-              ],
-
-              // Courier
-              if (order.courierType != null) ...[
-                const SizedBox(height: 3),
-                _CardRow(
-                  icon: Icons.local_shipping_outlined,
-                  value: order.courierType!,
-                ),
-              ],
-
-              // Bottom: date | total
-              const SizedBox(height: 8),
-              const Divider(height: 1),
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  Icon(Icons.access_time_outlined,
-                      size: 13,
-                      color: theme.colorScheme.onSurfaceVariant),
-                  const SizedBox(width: 4),
-                  Text(
-                    _fmtDateShort(order.createdAt),
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const Spacer(),
-                  if (total > 0)
-                    Text(
-                      _fmtAmount(total),
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                ],
-              ),
-
-              // Actions — awaiting_confirmation only
-              if (order.status == 'awaiting_confirmation') ...[
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => _cancel(context, ref),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.error,
-                          side: const BorderSide(color: AppColors.error),
-                          minimumSize: const Size(0, 36),
+                      // Comment preview
+                      if (order.pharmacyComment != null &&
+                          order.pharmacyComment!.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          order.pharmacyComment!,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        child: Text(l10n.cancel),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () => _confirm(context, ref),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
-                          minimumSize: const Size(0, 36),
+                      ],
+
+                      // Customer
+                      if (order.customerName != null ||
+                          order.customerPhone != null) ...[
+                        const SizedBox(height: 5),
+                        _CardRow(
+                          icon: Icons.person_outline,
+                          value: [order.customerName, order.customerPhone]
+                              .where((e) => e != null)
+                              .join(' · '),
                         ),
-                        child: Text(l10n.confirm),
+                      ],
+
+                      // Customer address
+                      if (order.customerAddress != null) ...[
+                        const SizedBox(height: 3),
+                        _CardRow(
+                          icon: Icons.location_on_outlined,
+                          value: order.customerAddress!,
+                          truncate: true,
+                        ),
+                      ],
+
+                      // Courier
+                      if (order.courierType != null) ...[
+                        const SizedBox(height: 3),
+                        _CardRow(
+                          icon: Icons.local_shipping_outlined,
+                          value: order.courierType!,
+                        ),
+                      ],
+
+                      // Bottom: date | total
+                      const SizedBox(height: 8),
+                      const Divider(height: 1),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Icon(Icons.access_time_outlined,
+                              size: 13,
+                              color: theme.colorScheme.onSurfaceVariant),
+                          const SizedBox(width: 4),
+                          Text(
+                            _fmtDateShort(order.createdAt),
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          const Spacer(),
+                          if (total > 0)
+                            Text(
+                              _fmtAmount(total),
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                        ],
                       ),
-                    ),
-                  ],
+
+                      // Actions — awaiting_confirmation only
+                      if (order.status == 'awaiting_confirmation') ...[
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () => _cancel(context, ref),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: AppColors.error,
+                                  side: const BorderSide(color: AppColors.error),
+                                  minimumSize: const Size(0, 38),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10)),
+                                ),
+                                child: Text(l10n.cancel),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: () => _confirm(context, ref),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.success,
+                                  foregroundColor: Colors.white,
+                                  minimumSize: const Size(0, 38),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10)),
+                                ),
+                                child: Text(l10n.confirm),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
-              ],
+              ),
             ],
           ),
         ),
@@ -1313,7 +1320,9 @@ class _ActionButtons extends StatelessWidget {
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.error,
                 side: const BorderSide(color: AppColors.error),
-                minimumSize: const Size(0, 44),
+                minimumSize: const Size(0, 48),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
               ),
               child: Text(l10n.cancel),
             ),
@@ -1324,9 +1333,11 @@ class _ActionButtons extends StatelessWidget {
               child: ElevatedButton(
                 onPressed: () => _confirm(context),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
+                  backgroundColor: AppColors.success,
                   foregroundColor: Colors.white,
-                  minimumSize: const Size(0, 44),
+                  minimumSize: const Size(0, 48),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
                 child: Text(l10n.confirm),
               ),

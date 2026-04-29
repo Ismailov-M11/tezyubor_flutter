@@ -20,7 +20,7 @@ class CustomButton extends StatelessWidget {
     this.variant = ButtonVariant.primary,
     this.icon,
     this.width,
-    this.height = 48,
+    this.height = 52,
   });
 
   @override
@@ -66,6 +66,8 @@ class CustomButton extends StatelessWidget {
             backgroundColor: AppColors.error,
             foregroundColor: Colors.white,
             minimumSize: Size(width ?? double.infinity, height),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14)),
           ),
           child: child,
         );

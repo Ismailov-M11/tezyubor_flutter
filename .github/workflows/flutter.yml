@@ -203,8 +203,12 @@ jobs:
           EOF
 
       # ── 9. Сборка iOS ────────────────────────────────
+      # Отключаем экспериментальные native assets — в Flutter 3.41.x
+      # они вызывают краш _embedNativeAssets при сборке без подписи.
       - name: Build iOS app (no codesign)
-        run: flutter build ios --release --no-codesign
+        run: |
+          flutter config --no-enable-native-assets 2>/dev/null || true
+          flutter build ios --release --no-codesign
 
       # ── 10. Упаковать .app → .ipa ───────────────────
       - name: Package unsigned IPA

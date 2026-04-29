@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../core/l10n/app_l10n.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -37,11 +36,10 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Center(
         child: FadeTransition(
           opacity: _fade,
@@ -52,16 +50,16 @@ class _SplashScreenState extends State<SplashScreen>
               children: [
                 SvgPicture.asset(
                   'assets/images/logo.svg',
-                  width: 90,
-                  height: 90,
+                  width: 120,
+                  height: 120,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
                 RichText(
                   text: TextSpan(
                     style: const TextStyle(
-                      fontSize: 32,
+                      fontSize: 42,
                       fontWeight: FontWeight.w800,
-                      letterSpacing: -1,
+                      letterSpacing: -1.5,
                     ),
                     children: [
                       TextSpan(
@@ -78,16 +76,6 @@ class _SplashScreenState extends State<SplashScreen>
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  l10n.quickDelivery,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.55),
-                      ),
                 ),
               ],
             ),

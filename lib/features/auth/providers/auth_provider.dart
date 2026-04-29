@@ -115,7 +115,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> _loadFromStorage() async {
-    final token = await StorageService.getToken();
+    final tokenFuture = StorageService.getToken();
+    await Future.delayed(const Duration(seconds: 3));
+    final token = await tokenFuture;
     final userJson = StorageService.getString(AppConstants.userKey);
     final user = AuthUser.fromJsonString(userJson);
 
@@ -193,7 +195,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> logout() async {
     await StorageService.clear();
     state = const AuthState(); // isInitialized: false → роутер показывает splash
-    await Future.delayed(const Duration(milliseconds: 1000));
+    await Future.delayed(const Duration(seconds: 3));
     state = const AuthState(isInitialized: true); // → роутер видит !isLoggedIn → /login
   }
 

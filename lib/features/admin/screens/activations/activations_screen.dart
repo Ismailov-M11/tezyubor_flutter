@@ -71,7 +71,6 @@ class _ActivationsScreenState extends ConsumerState<ActivationsScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (_) => _ActivationFilterSheet(
         initial: current,
         onApply: (f) => ref
@@ -89,7 +88,6 @@ class _ActivationsScreenState extends ConsumerState<ActivationsScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (_) => _ActivationDetailSheet(
         activation: activation,
         canReassign: me.isSuperAdmin,
@@ -102,7 +100,6 @@ class _ActivationsScreenState extends ConsumerState<ActivationsScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (_) => _ReassignSheet(
         activation: activation,
         onDone: (createdById, selfRegistered) async {
@@ -541,25 +538,20 @@ class _ActivationDetailSheet extends StatelessWidget {
       minChildSize: 0.35,
       maxChildSize: 0.9,
       expand: false,
-      builder: (_, ctrl) => Container(
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          children: [
-            const SizedBox(height: 8),
-            Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: theme.colorScheme.outline.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(2),
-              ),
+      builder: (_, ctrl) => Column(
+        children: [
+          const SizedBox(height: 8),
+          Container(
+            width: 36,
+            height: 4,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.outline.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(2),
             ),
-            Expanded(
-              child: ListView(
-                controller: ctrl,
+          ),
+          Expanded(
+            child: ListView(
+              controller: ctrl,
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
                 children: [
                   // Header
@@ -656,7 +648,6 @@ class _ActivationDetailSheet extends StatelessWidget {
             ),
           ],
         ),
-      ),
     );
   }
 }
@@ -729,15 +720,10 @@ class _ReassignSheetState extends ConsumerState<_ReassignSheet> {
     final usersState = ref.watch(adminUsersProvider);
 
     return Padding(
-      padding:
-          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: Container(
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-        child: Column(
+      padding: EdgeInsets.fromLTRB(
+        20, 12, 20, 24 + MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -810,7 +796,6 @@ class _ReassignSheetState extends ConsumerState<_ReassignSheet> {
             ],
           ],
         ),
-      ),
     );
   }
 }
@@ -942,11 +927,7 @@ class _ActivationFilterSheetState extends State<_ActivationFilterSheet> {
     final l10n = context.l10n;
     final theme = Theme.of(context);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+    return Padding(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
       child: Column(
         mainAxisSize: MainAxisSize.min,

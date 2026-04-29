@@ -878,87 +878,98 @@ class _AdminOrderCard extends ConsumerWidget {
     final canCancel =
         me.isSuperAdmin || me.permissions.contains('orders:cancel');
 
+    final statusColor = StatusBadge.colorFor(order.status);
     return Card(
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '#${order.token.toUpperCase()}',
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            fontFamily: 'monospace',
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
+              Container(width: 4, color: statusColor),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '#${order.token.toUpperCase()}',
+                                  style: theme.textTheme.titleSmall?.copyWith(
+                                    fontFamily: 'monospace',
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                if (order.pharmacyName != null)
+                                  Text(
+                                    order.pharmacyName!,
+                                    style: theme.textTheme.bodySmall
+                                        ?.copyWith(color: AppColors.primary),
+                                  ),
+                              ],
+                            ),
                           ),
+                          StatusBadge(status: order.status),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      _row(context, Icons.shopping_bag_outlined, l10n.adminOrderSum,
+                          '${order.medicinesTotal.toStringAsFixed(0)} сум'),
+                      if (order.customerPhone != null)
+                        _row(context, Icons.phone_outlined, l10n.phone,
+                            order.customerPhone!),
+                      if (order.customerAddress != null)
+                        _row(context, Icons.location_on_outlined, l10n.address,
+                            order.customerAddress!),
+                      if (order.selectedCourier != null)
+                        _row(context, Icons.local_shipping_outlined,
+                            l10n.adminOrderCourier,
+                            order.selectedCourier!.toUpperCase()),
+                      _row(context, Icons.access_time, l10n.adminOrderDate,
+                          _formatDate(order.createdAt)),
+                      if (order.status == 'awaiting_confirmation' &&
+                          (canConfirm || canCancel)) ...[
+                        const SizedBox(height: 12),
+                        const Divider(),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            if (canConfirm)
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: () => _confirmOrder(context, ref),
+                                  style: OutlinedButton.styleFrom(
+                                      minimumSize: const Size(0, 36)),
+                                  child: Text(l10n.adminConfirmOrder),
+                                ),
+                              ),
+                            if (canCancel) ...[
+                              if (canConfirm) const SizedBox(width: 8),
+                              IconButton(
+                                onPressed: () => _cancelOrder(context, ref),
+                                icon: const Icon(Icons.cancel_outlined,
+                                    color: AppColors.warning),
+                                style: IconButton.styleFrom(
+                                  backgroundColor:
+                                      AppColors.warning.withValues(alpha: 0.1),
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
-                        if (order.pharmacyName != null)
-                          Text(
-                            order.pharmacyName!,
-                            style: theme.textTheme.bodySmall
-                                ?.copyWith(color: AppColors.primary),
-                          ),
                       ],
-                    ),
-                  ),
-                  StatusBadge(status: order.status),
-                ],
-              ),
-              const SizedBox(height: 10),
-              _row(context, Icons.shopping_bag_outlined, l10n.adminOrderSum,
-                  '${order.medicinesTotal.toStringAsFixed(0)} сум'),
-              if (order.customerPhone != null)
-                _row(context, Icons.phone_outlined, l10n.phone,
-                    order.customerPhone!),
-              if (order.customerAddress != null)
-                _row(context, Icons.location_on_outlined, l10n.address,
-                    order.customerAddress!),
-              if (order.selectedCourier != null)
-                _row(context, Icons.local_shipping_outlined,
-                    l10n.adminOrderCourier,
-                    order.selectedCourier!.toUpperCase()),
-              _row(context, Icons.access_time, l10n.adminOrderDate,
-                  _formatDate(order.createdAt)),
-              if (order.status == 'awaiting_confirmation' &&
-                  (canConfirm || canCancel)) ...[
-                const SizedBox(height: 12),
-                const Divider(),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    if (canConfirm)
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => _confirmOrder(context, ref),
-                          style: OutlinedButton.styleFrom(
-                              minimumSize: const Size(0, 36)),
-                          child: Text(l10n.adminConfirmOrder),
-                        ),
-                      ),
-                    if (canCancel) ...[
-                      if (canConfirm) const SizedBox(width: 8),
-                      IconButton(
-                        onPressed: () => _cancelOrder(context, ref),
-                        icon: const Icon(Icons.cancel_outlined,
-                            color: AppColors.warning),
-                        style: IconButton.styleFrom(
-                          backgroundColor:
-                              AppColors.warning.withValues(alpha: 0.1),
-                        ),
-                      ),
                     ],
-                  ],
+                  ),
                 ),
-              ],
+              ),
             ],
           ),
         ),
@@ -1121,16 +1132,16 @@ class _AdminOrderDetailSheet extends ConsumerWidget {
                         icon: Icons.storefront_outlined,
                         label: l10n.adminPharmacyLbl,
                         value: order.pharmacyName!),
-                    if (order.pharmacyAddress != null)
-                      _DetailRow(
-                          icon: Icons.location_on_outlined,
-                          label: l10n.address,
-                          value: order.pharmacyAddress!),
                     if (order.pharmacyPhone != null)
                       _DetailRow(
                           icon: Icons.phone_outlined,
                           label: l10n.phone,
                           value: order.pharmacyPhone!),
+                    if (order.pharmacyAddress != null)
+                      _DetailRow(
+                          icon: Icons.location_on_outlined,
+                          label: l10n.address,
+                          value: order.pharmacyAddress!),
                   ]),
                   const SizedBox(height: 12),
                 ],
@@ -1214,74 +1225,72 @@ class _AdminOrderDetailSheet extends ConsumerWidget {
                   ]),
                 ],
                 const SizedBox(height: 16),
-                if (order.status == 'awaiting_confirmation' &&
-                    (canConfirm || canCancel)) ...[
-                  Row(
-                    children: [
-                      if (canCancel)
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () async {
-                              final confirmed = await showDialog<bool>(
-                                context: context,
-                                builder: (ctx) => AlertDialog(
-                                  title: Text(l10n.adminCancelOrder),
-                                  content: Text(l10n.adminDeleteOrderMsg),
-                                  actions: [
-                                    TextButton(
-                                        onPressed: () => Navigator.pop(ctx, false),
-                                        child: Text(l10n.cancel)),
-                                    TextButton(
-                                      onPressed: () => Navigator.pop(ctx, true),
-                                      style: TextButton.styleFrom(foregroundColor: AppColors.warning),
-                                      child: Text(l10n.yes),
-                                    ),
-                                  ],
-                                ),
-                              );
-                              if (confirmed == true && context.mounted) {
-                                final ok = await ref
-                                    .read(adminOrdersProvider.notifier)
-                                    .cancelOrder(order.token);
-                                if (context.mounted) {
-                                  Navigator.pop(context);
-                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                      content: Text(ok ? l10n.adminOrderCancelled : l10n.adminOrderError)));
-                                }
-                              }
-                            },
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.warning,
-                              side: const BorderSide(color: AppColors.warning),
-                              minimumSize: const Size(0, 44),
-                            ),
-                            child: Text(l10n.adminCancelOrder),
+                if (canCancel &&
+                    order.status != 'cancelled' &&
+                    order.status != 'delivered') ...[
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: () async {
+                        final confirmed = await showDialog<bool>(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            title: Text(l10n.adminCancelOrder),
+                            content: Text(l10n.adminDeleteOrderMsg),
+                            actions: [
+                              TextButton(
+                                  onPressed: () => Navigator.pop(ctx, false),
+                                  child: Text(l10n.cancel)),
+                              TextButton(
+                                onPressed: () => Navigator.pop(ctx, true),
+                                style: TextButton.styleFrom(foregroundColor: AppColors.warning),
+                                child: Text(l10n.yes),
+                              ),
+                            ],
                           ),
-                        ),
-                      if (canConfirm) ...[
-                        if (canCancel) const SizedBox(width: 10),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () async {
-                              final ok = await ref
-                                  .read(adminOrdersProvider.notifier)
-                                  .confirmOrder(order.token);
-                              if (context.mounted) {
-                                Navigator.pop(context);
-                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                    content: Text(ok ? l10n.adminOrderConfirmed : l10n.adminOrderError)));
-                              }
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
-                              foregroundColor: Colors.white,
-                              minimumSize: const Size(0, 44),
-                            ),
-                            child: Text(l10n.adminConfirmOrder),
-                          ),
-                        ),
-                      ],
-                    ],
+                        );
+                        if (confirmed == true && context.mounted) {
+                          final ok = await ref
+                              .read(adminOrdersProvider.notifier)
+                              .cancelOrder(order.token);
+                          if (context.mounted) {
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                content: Text(ok ? l10n.adminOrderCancelled : l10n.adminOrderError)));
+                          }
+                        }
+                      },
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.warning,
+                        side: const BorderSide(color: AppColors.warning),
+                        minimumSize: const Size(0, 44),
+                      ),
+                      child: Text(l10n.adminCancelOrder),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                if (canConfirm && order.status == 'awaiting_confirmation') ...[
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        final ok = await ref
+                            .read(adminOrdersProvider.notifier)
+                            .confirmOrder(order.token);
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                              content: Text(ok ? l10n.adminOrderConfirmed : l10n.adminOrderError)));
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.success,
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(0, 44),
+                      ),
+                      child: Text(l10n.adminConfirmOrder),
+                    ),
                   ),
                   const SizedBox(height: 8),
                 ],

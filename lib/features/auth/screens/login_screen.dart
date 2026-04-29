@@ -143,6 +143,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final user = ref.read(authStateProvider).user;
       if (user?.role == UserRole.admin) {
         context.go('/admin/orders');
+      } else if (user?.requiresLocation == true) {
+        context.go('/pharmacy/location-setup');
       } else {
         context.go('/pharmacy/orders');
       }

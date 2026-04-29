@@ -146,7 +146,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await StorageService.setToken(token);
       await StorageService.setString(AppConstants.userKey, user.toJsonString());
 
-      state = AuthState(token: token, user: user);
+      state = AuthState(token: token, user: user, isInitialized: true);
       return true;
     } on DioException catch (e) {
       final msg = _parseError(e);
@@ -178,7 +178,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await StorageService.setToken(token);
       await StorageService.setString(AppConstants.userKey, user.toJsonString());
 
-      state = AuthState(token: token, user: user);
+      state = AuthState(token: token, user: user, isInitialized: true);
       return true;
     } on DioException catch (e) {
       final msg = _parseError(e);

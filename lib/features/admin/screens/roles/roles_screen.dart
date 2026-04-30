@@ -22,6 +22,57 @@ const _allPermissions = [
   'activations:view',
 ];
 
+class _PermGroup {
+  final String Function(AppL10n) title;
+  final IconData icon;
+  final List<String> permissions;
+
+  const _PermGroup({
+    required this.title,
+    required this.icon,
+    required this.permissions,
+  });
+}
+
+final _permGroups = [
+  _PermGroup(
+    title: (l) => l.permSectionOrders,
+    icon: Icons.receipt_long_outlined,
+    permissions: [
+      'orders:view',
+      'orders:create',
+      'orders:confirm',
+      'orders:cancel',
+      'orders:delete',
+    ],
+  ),
+  _PermGroup(
+    title: (l) => l.permSectionPharmacies,
+    icon: Icons.store_outlined,
+    permissions: [
+      'pharmacies:view',
+      'pharmacies:create',
+      'pharmacies:edit',
+      'pharmacies:delete',
+    ],
+  ),
+  _PermGroup(
+    title: (l) => l.permSectionClients,
+    icon: Icons.people_outline,
+    permissions: ['clients:view'],
+  ),
+  _PermGroup(
+    title: (l) => l.permSectionAnalytics,
+    icon: Icons.analytics_outlined,
+    permissions: ['analytics:view'],
+  ),
+  _PermGroup(
+    title: (l) => l.permSectionActivations,
+    icon: Icons.how_to_reg_outlined,
+    permissions: ['activations:view'],
+  ),
+];
+
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 class RolesScreen extends ConsumerStatefulWidget {
@@ -430,28 +481,16 @@ class _RoleFormSheetState extends ConsumerState<_RoleFormSheet> {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: _allPermissions.map((p) {
-                      final isSelected = _selected.contains(p);
-                      return FilterChip(
-                        label: Text(
-                          l10n.permissionLabel(p),
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isSelected ? Colors.white : null,
-                          ),
-                        ),
-                        selected: isSelected,
-                        onSelected: (v) => setState(
+                  ..._permGroups.map((group) => _PermSection(
+                        group: group,
+                        selected: _selected,
+                        onToggle: (p, v) => setState(
                             () => v ? _selected.add(p) : _selected.remove(p)),
-                        selectedColor: AppColors.primary,
-                        checkmarkColor: Colors.white,
-                        showCheckmark: false,
-                      );
-                    }).toList(),
-                  ),
+                        onToggleAll: (perms, selectAll) => setState(() =>
+                            selectAll
+                                ? _selected.addAll(perms)
+                                : _selected.removeAll(perms)),
+                      )),
                   const SizedBox(height: 24),
                   SizedBox(
                     width: double.infinity,
@@ -471,6 +510,125 @@ class _RoleFormSheetState extends ConsumerState<_RoleFormSheet> {
                 ],
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Permission Section ───────────────────────────────────────────────────────
+
+class _PermSection extends StatelessWidget {
+  final _PermGroup group;
+  final Set<String> selected;
+  final void Function(String perm, bool value) onToggle;
+  final void Function(List<String> perms, bool selectAll) onToggleAll;
+
+  const _PermSection({
+    required this.group,
+    required this.selected,
+    required this.onToggle,
+    required this.onToggleAll,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final perms = group.permissions;
+    final allSelected = perms.every(selected.contains);
+    final anySelected = perms.any(selected.contains);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Container(
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: anySelected
+                ? AppColors.primary.withValues(alpha: 0.3)
+                : theme.colorScheme.outline.withValues(alpha: 0.2),
+          ),
+        ),
+        child: Column(
+          children: [
+            // Section header with select-all checkbox
+            InkWell(
+              onTap: () => onToggleAll(perms, !allSelected),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                child: Row(
+                  children: [
+                    Icon(group.icon,
+                        size: 16,
+                        color: anySelected
+                            ? AppColors.primary
+                            : theme.colorScheme.onSurfaceVariant),
+                    const SizedBox(width: 8),
+                    Text(
+                      group.title(l10n),
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: anySelected
+                            ? AppColors.primary
+                            : theme.colorScheme.onSurface,
+                      ),
+                    ),
+                    const Spacer(),
+                    Checkbox(
+                      value: allSelected ? true : (anySelected ? null : false),
+                      tristate: true,
+                      onChanged: (_) => onToggleAll(perms, !allSelected),
+                      activeColor: AppColors.primary,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const Divider(height: 1, indent: 14, endIndent: 14),
+            // Individual permissions
+            ...perms.map((p) {
+              final isSelected = selected.contains(p);
+              return InkWell(
+                onTap: () => onToggle(p, !isSelected),
+                borderRadius: p == perms.last
+                    ? const BorderRadius.vertical(bottom: Radius.circular(12))
+                    : BorderRadius.zero,
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          l10n.permissionLabel(p),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: isSelected
+                                ? AppColors.primary
+                                : theme.colorScheme.onSurface,
+                            fontWeight: isSelected
+                                ? FontWeight.w500
+                                : FontWeight.normal,
+                          ),
+                        ),
+                      ),
+                      Checkbox(
+                        value: isSelected,
+                        onChanged: (v) => onToggle(p, v ?? false),
+                        activeColor: AppColors.primary,
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
           ],
         ),
       ),

@@ -115,12 +115,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> _loadFromStorage() async {
-    final token = await StorageService.getToken();
+    final tokenFuture = StorageService.getToken();
+    await Future.delayed(const Duration(seconds: 3));
+    final token = await tokenFuture;
     final userJson = StorageService.getString(AppConstants.userKey);
     final user = AuthUser.fromJsonString(userJson);
 
     if (token != null && user != null) {
-      state = AuthState(token: token, user: user);
+      state = AuthState(token: token, user: user, isInitialized: true);
+    } else {
+      state = const AuthState(isInitialized: true);
     }
   }
 
@@ -144,7 +148,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await StorageService.setToken(token);
       await StorageService.setString(AppConstants.userKey, user.toJsonString());
 
-      state = AuthState(token: token, user: user);
+      state = AuthState(token: token, user: user, isInitialized: true);
       return true;
     } on DioException catch (e) {
       final msg = _parseError(e);
@@ -176,7 +180,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await StorageService.setToken(token);
       await StorageService.setString(AppConstants.userKey, user.toJsonString());
 
-      state = AuthState(token: token, user: user);
+      state = AuthState(token: token, user: user, isInitialized: true);
       return true;
     } on DioException catch (e) {
       final msg = _parseError(e);
@@ -190,7 +194,27 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<void> logout() async {
     await StorageService.clear();
-    state = const AuthState();
+    state = const AuthState(); // isInitialized: false → роутер показывает splash
+    await Future.delayed(const Duration(seconds: 3));
+    state = const AuthState(isInitialized: true); // → роутер видит !isLoggedIn → /login
+  }
+
+  Future<void> clearRequiresLocation() async {
+    final user = state.user;
+    if (user == null) return;
+    final updated = AuthUser(
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      login: user.login,
+      role: user.role,
+      permissions: user.permissions,
+      isSuperAdmin: user.isSuperAdmin,
+      subscriptionExpiry: user.subscriptionExpiry,
+      requiresLocation: false,
+    );
+    await StorageService.setString(AppConstants.userKey, updated.toJsonString());
+    state = state.copyWith(user: updated);
   }
 
   void clearError() => state = state.copyWith(clearError: true);

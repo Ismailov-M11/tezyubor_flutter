@@ -10,6 +10,57 @@ import '../../../shared/widgets/custom_text_field.dart';
 import '../models/auth_models.dart';
 import '../providers/auth_provider.dart';
 
+class _LanguageSwitcher extends ConsumerWidget {
+  const _LanguageSwitcher();
+
+  static const _langs = [
+    ('uz', "O'zbek"),
+    ('ru', 'Русский'),
+    ('en', 'English'),
+  ];
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final current = ref.watch(localeProvider).languageCode;
+    return PopupMenuButton<String>(
+      icon: Icon(
+        Icons.language_outlined,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
+      tooltip: 'Language',
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      onSelected: (code) =>
+          ref.read(localeProvider.notifier).setLocale(Locale(code)),
+      itemBuilder: (_) => _langs
+          .map(
+            (lang) => PopupMenuItem<String>(
+              value: lang.$1,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      lang.$2,
+                      style: TextStyle(
+                        fontWeight: current == lang.$1
+                            ? FontWeight.w600
+                            : FontWeight.normal,
+                        color:
+                            current == lang.$1 ? AppColors.primary : null,
+                      ),
+                    ),
+                  ),
+                  if (current == lang.$1)
+                    const Icon(Icons.check,
+                        size: 16, color: AppColors.primary),
+                ],
+              ),
+            ),
+          )
+          .toList(),
+    );
+  }
+}
+
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -24,6 +75,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _passwordFocus = FocusNode();
 
   int _logoTapCount = 0;
+  bool _localeInitialized = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_localeInitialized) {
+      _localeInitialized = true;
+      final saved = ref.read(localeProvider).languageCode;
+      // Auto-apply device locale only if no preference saved yet
+      if (saved == 'ru') {
+        final deviceLang =
+            WidgetsBinding.instance.platformDispatcher.locale.languageCode;
+        if (deviceLang == 'uz' || deviceLang == 'en') {
+          ref.read(localeProvider.notifier).setLocale(Locale(deviceLang));
+        }
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -74,6 +143,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final user = ref.read(authStateProvider).user;
       if (user?.role == UserRole.admin) {
         context.go('/admin/orders');
+      } else if (user?.requiresLocation == true) {
+        context.go('/pharmacy/location-setup');
       } else {
         context.go('/pharmacy/orders');
       }
@@ -97,16 +168,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // Theme toggle
+                // Theme toggle + language switcher
                 Align(
                   alignment: Alignment.topRight,
-                  child: IconButton(
-                    icon: Icon(
-                      isDark ? Icons.light_mode : Icons.dark_mode,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                    onPressed: () =>
-                        ref.read(themeModeProvider.notifier).toggle(),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: Icon(
+                          isDark ? Icons.light_mode : Icons.dark_mode,
+                          color:
+                              Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                        onPressed: () =>
+                            ref.read(themeModeProvider.notifier).toggle(),
+                      ),
+                      const _LanguageSwitcher(),
+                    ],
                   ),
                 ),
 

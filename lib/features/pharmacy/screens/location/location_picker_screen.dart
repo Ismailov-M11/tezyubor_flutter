@@ -7,6 +7,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/l10n/app_l10n.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../shared/widgets/custom_button.dart';
+import '../../../auth/providers/auth_provider.dart';
 import '../../providers/pharmacy_provider.dart';
 
 // Uzbekistan bounding box
@@ -14,7 +15,21 @@ const _uzSW = Point(latitude: 37.1, longitude: 55.9);
 const _uzNE = Point(latitude: 45.6, longitude: 73.2);
 
 class LocationPickerScreen extends ConsumerStatefulWidget {
-  const LocationPickerScreen({super.key});
+  /// When provided, "Save" returns the address via this callback instead of
+  /// calling the pharmacy profile API. Used for admin business address editing.
+  final void Function(String address)? onAddressPicked;
+  final String? initialAddress;
+
+  /// When true, after saving clears the requiresLocation flag so the router
+  /// redirects to /pharmacy/orders automatically.
+  final bool isSetupMode;
+
+  const LocationPickerScreen({
+    super.key,
+    this.onAddressPicked,
+    this.initialAddress,
+    this.isSetupMode = false,
+  });
 
   @override
   ConsumerState<LocationPickerScreen> createState() =>
@@ -37,10 +52,14 @@ class _LocationPickerScreenState extends ConsumerState<LocationPickerScreen> {
   @override
   void initState() {
     super.initState();
-    final profile = ref.read(pharmacyProfileProvider).profile;
-    if (profile?.lat != null && profile?.lng != null) {
-      _center = Point(latitude: profile!.lat!, longitude: profile.lng!);
-      _address = profile.address ?? '';
+    if (widget.onAddressPicked != null) {
+      _address = widget.initialAddress ?? '';
+    } else {
+      final profile = ref.read(pharmacyProfileProvider).profile;
+      if (profile?.lat != null && profile?.lng != null) {
+        _center = Point(latitude: profile!.lat!, longitude: profile.lng!);
+        _address = profile.address ?? '';
+      }
     }
   }
 
@@ -211,6 +230,12 @@ class _LocationPickerScreenState extends ConsumerState<LocationPickerScreen> {
 
   Future<void> _save() async {
     final l10n = context.l10n;
+    if (widget.onAddressPicked != null) {
+      widget.onAddressPicked!(
+          _address.isNotEmpty ? _address : '${_center.latitude}, ${_center.longitude}');
+      if (mounted) Navigator.pop(context);
+      return;
+    }
     setState(() => _isSaving = true);
     try {
       await ApiClient.instance.put('/pharmacy/location', data: {
@@ -219,6 +244,11 @@ class _LocationPickerScreenState extends ConsumerState<LocationPickerScreen> {
         if (_address.isNotEmpty) 'address': _address,
       });
       await ref.read(pharmacyProfileProvider.notifier).load();
+      if (widget.isSetupMode) {
+        await ref.read(authStateProvider.notifier).clearRequiresLocation();
+        if (mounted) setState(() => _isSaving = false);
+        return;
+      }
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(

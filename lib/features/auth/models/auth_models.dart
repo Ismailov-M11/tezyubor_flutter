@@ -79,12 +79,14 @@ class AuthState {
   final AuthUser? user;
   final bool isLoading;
   final String? error;
+  final bool isInitialized;
 
   const AuthState({
     this.token,
     this.user,
     this.isLoading = false,
     this.error,
+    this.isInitialized = false,
   });
 
   bool get isAuthenticated => token != null && user != null;
@@ -94,6 +96,7 @@ class AuthState {
     AuthUser? user,
     bool? isLoading,
     String? error,
+    bool? isInitialized,
     bool clearError = false,
     bool clearToken = false,
     bool clearUser = false,
@@ -103,5 +106,6 @@ class AuthState {
         user: clearUser ? null : user ?? this.user,
         isLoading: isLoading ?? this.isLoading,
         error: clearError ? null : error ?? this.error,
+        isInitialized: isInitialized ?? this.isInitialized,
       );
 }

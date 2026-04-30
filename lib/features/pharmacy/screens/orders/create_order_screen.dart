@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/l10n/app_l10n.dart';
+import '../../../../shared/utils/uz_phone_formatter.dart';
 import '../../../../shared/widgets/custom_button.dart';
 import '../../../../shared/widgets/custom_text_field.dart';
 import '../../models/order_model.dart';
+import '../../providers/clients_provider.dart';
 import '../../providers/orders_provider.dart';
 
 class CreateOrderSheet extends ConsumerStatefulWidget {
@@ -22,7 +24,26 @@ class _CreateOrderSheetState extends ConsumerState<CreateOrderSheet> {
   bool _isLoading = false;
 
   @override
+  void initState() {
+    super.initState();
+    _phoneController.addListener(_onPhoneChanged);
+  }
+
+  void _onPhoneChanged() {
+    if (UzPhoneFormatter.isComplete(_phoneController.text)) {
+      final digits = UzPhoneFormatter.digitsOnly(_phoneController.text);
+      final clients = ref.read(clientsProvider).clients;
+      final match = clients.where((c) =>
+          UzPhoneFormatter.digitsOnly(c.phone) == digits).firstOrNull;
+      if (match?.name != null && _nameController.text.isEmpty) {
+        _nameController.text = match!.name!;
+      }
+    }
+  }
+
+  @override
   void dispose() {
+    _phoneController.removeListener(_onPhoneChanged);
     _commentController.dispose();
     _totalController.dispose();
     _nameController.dispose();
@@ -135,6 +156,7 @@ class _CreateOrderSheetState extends ConsumerState<CreateOrderSheet> {
               controller: _phoneController,
               keyboardType: TextInputType.phone,
               prefixIcon: const Icon(Icons.phone_outlined),
+              inputFormatters: [UzPhoneFormatter()],
             ),
             const SizedBox(height: 24),
 

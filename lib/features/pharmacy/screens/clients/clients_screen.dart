@@ -43,9 +43,6 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
       builder: (_) => _ClientFilterSheet(
         current: current,
         onApply: (f) => ref.read(clientsProvider.notifier).applyFilter(f),
@@ -58,9 +55,6 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
       builder: (_) => _ClientDetailSheet(client: client),
     );
   }
@@ -78,8 +72,7 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
           Badge(
             isLabelVisible: hasFilter &&
                 (state.filter.dateFrom != null ||
-                    state.filter.dateTo != null ||
-                    state.filter.minOrders != null),
+                    state.filter.dateTo != null),
             backgroundColor: AppColors.primary,
             child: IconButton(
               icon: const Icon(Icons.filter_list),
@@ -182,9 +175,9 @@ class _ClientCard extends StatelessWidget {
     final c = client;
 
     return Card(
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
         child: ListTile(
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
@@ -403,22 +396,12 @@ class _ClientFilterSheet extends StatefulWidget {
 class _ClientFilterSheetState extends State<_ClientFilterSheet> {
   DateTime? _dateFrom;
   DateTime? _dateTo;
-  int? _minOrders;
-  final _minOrdersCtrl = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _dateFrom = widget.current.dateFrom;
     _dateTo = widget.current.dateTo;
-    _minOrders = widget.current.minOrders;
-    if (_minOrders != null) _minOrdersCtrl.text = '$_minOrders';
-  }
-
-  @override
-  void dispose() {
-    _minOrdersCtrl.dispose();
-    super.dispose();
   }
 
   Future<void> _pickDate(bool isFrom) async {
@@ -501,30 +484,6 @@ class _ClientFilterSheetState extends State<_ClientFilterSheet> {
           ),
           const SizedBox(height: 16),
 
-          // Min orders
-          Text(l10n.minOrders,
-              style: Theme.of(context).textTheme.labelMedium
-                  ?.copyWith(fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _minOrdersCtrl,
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(
-              hintText: '0',
-              isDense: true,
-              suffixIcon: _minOrdersCtrl.text.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear, size: 18),
-                      onPressed: () {
-                        _minOrdersCtrl.clear();
-                        setState(() => _minOrders = null);
-                      },
-                    )
-                  : null,
-            ),
-            onChanged: (v) => setState(
-                () => _minOrders = int.tryParse(v)),
-          ),
           const SizedBox(height: 20),
 
           SizedBox(
@@ -536,7 +495,6 @@ class _ClientFilterSheetState extends State<_ClientFilterSheet> {
                   search: widget.current.search,
                   dateFrom: _dateFrom,
                   dateTo: _dateTo,
-                  minOrders: _minOrders,
                 ));
                 Navigator.pop(context);
               },

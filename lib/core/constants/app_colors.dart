@@ -5,12 +5,12 @@ class AppColors {
   static const Color primary = Color(0xFFFF6929);
 
   // Light theme
-  static const Color backgroundLight = Color(0xFFFFFFFF);
+  static const Color backgroundLight = Color(0xFFF2EFEB);
   static const Color foregroundLight = Color(0xFF1E1A17);
   static const Color cardLight = Color(0xFFFFFFFF);
-  static const Color borderLight = Color(0xFFE8E3DF);
-  static const Color mutedLight = Color(0xFFF5F2F0);
-  static const Color mutedForegroundLight = Color(0xFF9C8B80);
+  static const Color borderLight = Color(0xFFCBC5BE);
+  static const Color mutedLight = Color(0xFFE8E4DF);
+  static const Color mutedForegroundLight = Color(0xFF8A7B70);
 
   // Dark theme
   static const Color backgroundDark = Color(0xFF1A1A17);

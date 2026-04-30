@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class CustomTextField extends StatefulWidget {
   final String label;
@@ -15,6 +16,7 @@ class CustomTextField extends StatefulWidget {
   final TextInputAction textInputAction;
   final FocusNode? focusNode;
   final void Function(String)? onSubmitted;
+  final List<TextInputFormatter>? inputFormatters;
 
   const CustomTextField({
     super.key,
@@ -32,6 +34,7 @@ class CustomTextField extends StatefulWidget {
     this.textInputAction = TextInputAction.next,
     this.focusNode,
     this.onSubmitted,
+    this.inputFormatters,
   });
 
   @override
@@ -54,6 +57,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
       textInputAction: widget.textInputAction,
       focusNode: widget.focusNode,
       onFieldSubmitted: widget.onSubmitted,
+      inputFormatters: widget.inputFormatters,
       decoration: InputDecoration(
         labelText: widget.label,
         hintText: widget.hint,

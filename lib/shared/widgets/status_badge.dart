@@ -11,11 +11,10 @@ class StatusBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final (color, text) = _resolve(status);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.25), width: 1),
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(100),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -33,8 +32,9 @@ class StatusBadge extends StatelessWidget {
             label ?? text,
             style: TextStyle(
               color: color,
-              fontSize: 11,
+              fontSize: 10.5,
               fontWeight: FontWeight.w600,
+              letterSpacing: 0.1,
             ),
           ),
         ],

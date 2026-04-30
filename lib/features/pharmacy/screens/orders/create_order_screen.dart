@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/constants/app_colors.dart';
 import '../../../../core/l10n/app_l10n.dart';
 import '../../../../shared/utils/uz_phone_formatter.dart';
 import '../../../../shared/widgets/custom_button.dart';
@@ -33,8 +34,9 @@ class _CreateOrderSheetState extends ConsumerState<CreateOrderSheet> {
     if (UzPhoneFormatter.isComplete(_phoneController.text)) {
       final digits = UzPhoneFormatter.digitsOnly(_phoneController.text);
       final clients = ref.read(clientsProvider).clients;
-      final match = clients.where((c) =>
-          UzPhoneFormatter.digitsOnly(c.phone) == digits).firstOrNull;
+      final match = clients
+          .where((c) => UzPhoneFormatter.digitsOnly(c.phone) == digits)
+          .firstOrNull;
       if (match?.name != null && _nameController.text.isEmpty) {
         _nameController.text = match!.name!;
       }
@@ -88,10 +90,17 @@ class _CreateOrderSheetState extends ConsumerState<CreateOrderSheet> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
+    final cardBg = isDark ? AppColors.cardDark : Colors.white;
+
     return Padding(
       padding: EdgeInsets.fromLTRB(
-        20, 20, 20,
-        MediaQuery.of(context).viewInsets.bottom + 20,
+        20,
+        0,
+        20,
+        MediaQuery.of(context).viewInsets.bottom + 24,
       ),
       child: Form(
         key: _formKey,
@@ -99,64 +108,129 @@ class _CreateOrderSheetState extends ConsumerState<CreateOrderSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Handle bar
+            Center(
+              child: Container(
+                width: 48,
+                height: 4,
+                margin: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.outline.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+
+            // Title row
             Row(
               children: [
-                Text(l10n.newOrder,
-                    style: Theme.of(context).textTheme.titleLarge),
+                Text(
+                  l10n.newOrder,
+                  style: theme.textTheme.titleLarge
+                      ?.copyWith(fontWeight: FontWeight.w700),
+                ),
                 const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.pop(context),
+                GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color:
+                          theme.colorScheme.onSurface.withValues(alpha: 0.06),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.close,
+                      size: 16,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 20),
 
-            // Комментарий к заказу (обязательное)
-            CustomTextField(
-              label: '${l10n.orderCommentLbl} *',
-              hint: l10n.orderCommentHint,
-              controller: _commentController,
-              prefixIcon: const Icon(Icons.comment_outlined),
-              maxLines: 3,
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? l10n.fillAllFields : null,
+            // ЗАКАЗ section
+            const _SectionLabel('ЗАКАЗ'),
+            const SizedBox(height: 8),
+            Container(
+              decoration: BoxDecoration(
+                color: cardBg,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: borderColor),
+              ),
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+                    child: CustomTextField(
+                      label: '${l10n.orderCommentLbl} *',
+                      hint: l10n.orderCommentHint,
+                      controller: _commentController,
+                      prefixIcon: const Icon(Icons.comment_outlined),
+                      maxLines: 3,
+                      validator: (v) => (v == null || v.trim().isEmpty)
+                          ? l10n.fillAllFields
+                          : null,
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+                    child: CustomTextField(
+                      label: l10n.orderAmountLbl,
+                      hint: '150000',
+                      controller: _totalController,
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      prefixIcon: const Icon(Icons.payments_outlined),
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) return null;
+                        final parsed =
+                            double.tryParse(v.trim().replaceAll(',', '.'));
+                        if (parsed == null || parsed < 0) {
+                          return l10n.fillAllFields;
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
 
-            // Сумма заказа (необязательное)
-            CustomTextField(
-              label: l10n.orderAmountLbl,
-              hint: '150000',
-              controller: _totalController,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              prefixIcon: const Icon(Icons.payments_outlined),
-              validator: (v) {
-                if (v == null || v.trim().isEmpty) return null;
-                final parsed =
-                    double.tryParse(v.trim().replaceAll(',', '.'));
-                if (parsed == null || parsed < 0) return l10n.fillAllFields;
-                return null;
-              },
-            ),
-            const SizedBox(height: 12),
-
-            // Имя клиента (необязательное)
-            CustomTextField(
-              label: l10n.customer,
-              controller: _nameController,
-              prefixIcon: const Icon(Icons.person_outline),
-            ),
-            const SizedBox(height: 12),
-
-            // Телефон клиента (необязательное)
-            CustomTextField(
-              label: l10n.phone,
-              controller: _phoneController,
-              keyboardType: TextInputType.phone,
-              prefixIcon: const Icon(Icons.phone_outlined),
-              inputFormatters: [UzPhoneFormatter()],
+            // КЛИЕНТ section
+            const _SectionLabel('КЛИЕНТ'),
+            const SizedBox(height: 8),
+            Container(
+              decoration: BoxDecoration(
+                color: cardBg,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: borderColor),
+              ),
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+                    child: CustomTextField(
+                      label: l10n.customer,
+                      controller: _nameController,
+                      prefixIcon: const Icon(Icons.person_outline),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+                    child: CustomTextField(
+                      label: l10n.phone,
+                      controller: _phoneController,
+                      keyboardType: TextInputType.phone,
+                      prefixIcon: const Icon(Icons.phone_outlined),
+                      inputFormatters: [UzPhoneFormatter()],
+                    ),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 24),
 
@@ -170,4 +244,20 @@ class _CreateOrderSheetState extends ConsumerState<CreateOrderSheet> {
       ),
     );
   }
+}
+
+class _SectionLabel extends StatelessWidget {
+  final String text;
+  const _SectionLabel(this.text);
+
+  @override
+  Widget build(BuildContext context) => Text(
+        text,
+        style: TextStyle(
+          fontSize: 10.5,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.8,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
+      );
 }

@@ -879,7 +879,9 @@ class _PharmacyFormSheetState extends ConsumerState<_PharmacyFormSheet> {
     final l10n = context.l10n;
     if (_nameCtrl.text.trim().isEmpty ||
         _phoneCtrl.text.trim().isEmpty ||
-        _loginCtrl.text.trim().isEmpty) return;
+        _loginCtrl.text.trim().isEmpty) {
+      return;
+    }
     if (!_isEdit && _passwordCtrl.text.trim().length < 6) return;
     if (_expiryDate == null && !_isEdit) return;
 

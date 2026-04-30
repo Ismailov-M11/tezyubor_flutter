@@ -83,8 +83,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
   @override
   void initState() {
     super.initState();
-    _tabController =
-        TabController(length: _tabStatuses.length, vsync: this);
+    _tabController = TabController(length: _tabStatuses.length, vsync: this);
     if (widget.openCreate) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _openCreate());
     }
@@ -122,8 +121,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
     setState(() => _searchVisible = !_searchVisible);
     if (!_searchVisible) {
       _searchController.clear();
-      final f =
-          ref.read(ordersProvider).filter.copyWith(clearSearch: true);
+      final f = ref.read(ordersProvider).filter.copyWith(clearSearch: true);
       ref.read(ordersProvider.notifier).applyFilter(f);
     }
   }
@@ -164,8 +162,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
         title: Text(l10n.orders),
         actions: [
           IconButton(
-            icon: Icon(
-                _searchVisible ? Icons.search_off : Icons.search),
+            icon: Icon(_searchVisible ? Icons.search_off : Icons.search),
             onPressed: _toggleSearch,
           ),
           Badge(
@@ -218,8 +215,10 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
                 isScrollable: true,
                 tabAlignment: TabAlignment.start,
                 labelPadding: const EdgeInsets.symmetric(horizontal: 14),
-                labelStyle: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
-                unselectedLabelStyle: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500),
+                labelStyle: const TextStyle(
+                    fontSize: 12.5, fontWeight: FontWeight.w600),
+                unselectedLabelStyle: const TextStyle(
+                    fontSize: 12.5, fontWeight: FontWeight.w500),
                 indicatorWeight: 2,
                 indicatorColor: AppColors.primary,
                 dividerColor: Colors.transparent,
@@ -236,8 +235,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
           if (hasCourierDateFilter)
             _ActiveFilterRow(
               filter: state.filter,
-              onClear: () =>
-                  ref.read(ordersProvider.notifier).clearFilter(),
+              onClear: () => ref.read(ordersProvider.notifier).clearFilter(),
             ),
           Expanded(
             child: state.isLoading && state.orders.isEmpty
@@ -336,7 +334,7 @@ class _TabOrderList extends ConsumerWidget {
       onRefresh: () => ref.read(ordersProvider.notifier).load(),
       color: AppColors.primary,
       child: ListView.separated(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 110),
         itemCount: orders.length,
         separatorBuilder: (_, __) => const SizedBox(height: 10),
         itemBuilder: (_, i) => _OrderCard(
@@ -358,8 +356,9 @@ class _ActiveFilterRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      color: isDark ? AppColors.mutedDark : AppColors.mutedLight,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: Row(
         children: [
@@ -406,17 +405,14 @@ class _FilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: color.withValues(alpha: 0.3)),
+          borderRadius: BorderRadius.circular(100),
         ),
         child: Text(label,
             style: TextStyle(
-                fontSize: 11,
-                color: color,
-                fontWeight: FontWeight.w600)),
+                fontSize: 11, color: color, fontWeight: FontWeight.w600)),
       );
 }
 
@@ -430,75 +426,117 @@ class _OrderCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
-    final theme = Theme.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final mutedFg = isDark
+        ? AppColors.mutedForegroundDark
+        : AppColors.mutedForegroundLight;
     final total = order.totalPrice ??
         ((order.medicinesTotal ?? 0.0) + (order.deliveryPrice ?? 0.0));
-
     final statusColor = StatusBadge.colorFor(order.status);
 
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.cardDark : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isDark ? AppColors.borderDark : AppColors.borderLight,
+          ),
+        ),
         child: IntrinsicHeight(
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Container(width: 4, color: statusColor),
+              // Status accent bar
+              Container(
+                width: 3,
+                decoration: BoxDecoration(
+                  color: statusColor,
+                  borderRadius: const BorderRadius.horizontal(
+                    left: Radius.circular(20),
+                  ),
+                ),
+              ),
+              // Content
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.all(14),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Token + Status
+                      // Token row + status badge
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          Expanded(
-                            child: Text(
-                              '#${order.token.toUpperCase()}',
-                              style: theme.textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'monospace',
-                                fontSize: 12,
-                              ),
-                              overflow: TextOverflow.ellipsis,
+                          Text(
+                            '#${order.token.toUpperCase()}',
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.8,
+                              color: mutedFg,
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          const Spacer(),
                           StatusBadge(status: order.status),
                         ],
                       ),
 
-                      // Comment preview
-                      if (order.pharmacyComment != null &&
-                          order.pharmacyComment!.isNotEmpty) ...[
+                      // Customer name (prominent)
+                      if (order.customerName != null) ...[
                         const SizedBox(height: 6),
                         Text(
-                          order.pharmacyComment!,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
+                          order.customerName!,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: isDark
+                                ? AppColors.foregroundDark
+                                : AppColors.foregroundLight,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ],
 
-                      // Customer
-                      if (order.customerName != null ||
-                          order.customerPhone != null) ...[
-                        const SizedBox(height: 5),
-                        _CardRow(
-                          icon: Icons.person_outline,
-                          value: [order.customerName, order.customerPhone]
-                              .where((e) => e != null)
-                              .join(' · '),
+                      // Comment preview
+                      if (order.pharmacyComment != null &&
+                          order.pharmacyComment!.isNotEmpty) ...[
+                        const SizedBox(height: 7),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? AppColors.mutedDark
+                                : AppColors.mutedLight,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            order.pharmacyComment!,
+                            style:
+                                TextStyle(fontSize: 12, color: mutedFg),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ],
 
-                      // Customer address
+                      // Phone
+                      if (order.customerPhone != null) ...[
+                        const SizedBox(height: 7),
+                        _CardRow(
+                          icon: Icons.phone_outlined,
+                          value: order.customerPhone!,
+                        ),
+                      ],
+
+                      // Address
                       if (order.customerAddress != null) ...[
-                        const SizedBox(height: 3),
+                        const SizedBox(height: 4),
                         _CardRow(
                           icon: Icons.location_on_outlined,
                           value: order.customerAddress!,
@@ -508,42 +546,47 @@ class _OrderCard extends ConsumerWidget {
 
                       // Courier
                       if (order.courierType != null) ...[
-                        const SizedBox(height: 3),
+                        const SizedBox(height: 4),
                         _CardRow(
                           icon: Icons.local_shipping_outlined,
                           value: order.courierType!,
                         ),
                       ],
 
-                      // Bottom: date | total
-                      const SizedBox(height: 8),
-                      const Divider(height: 1),
-                      const SizedBox(height: 6),
+                      // Footer: date | amount
+                      const SizedBox(height: 10),
                       Row(
                         children: [
                           Icon(Icons.access_time_outlined,
-                              size: 13,
-                              color: theme.colorScheme.onSurfaceVariant),
+                              size: 12, color: mutedFg),
                           const SizedBox(width: 4),
                           Text(
                             _fmtDateShort(order.createdAt),
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
+                            style: TextStyle(fontSize: 11, color: mutedFg),
                           ),
                           const Spacer(),
                           if (total > 0)
-                            Text(
-                              _fmtAmount(total),
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.primary,
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 9, vertical: 3),
+                              decoration: BoxDecoration(
+                                color:
+                                    AppColors.primary.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                _fmtAmount(total),
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.primary,
+                                ),
                               ),
                             ),
                         ],
                       ),
 
-                      // Actions — awaiting_confirmation only
+                      // Awaiting confirmation quick actions
                       if (order.status == 'awaiting_confirmation') ...[
                         const SizedBox(height: 10),
                         Row(
@@ -553,10 +596,11 @@ class _OrderCard extends ConsumerWidget {
                                 onPressed: () => _cancel(context, ref),
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: AppColors.error,
-                                  side: const BorderSide(color: AppColors.error),
+                                  side:
+                                      const BorderSide(color: AppColors.error),
                                   minimumSize: const Size(0, 38),
                                   shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10)),
+                                      borderRadius: BorderRadius.circular(12)),
                                 ),
                                 child: Text(l10n.cancel),
                               ),
@@ -570,7 +614,7 @@ class _OrderCard extends ConsumerWidget {
                                   foregroundColor: Colors.white,
                                   minimumSize: const Size(0, 38),
                                   shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10)),
+                                      borderRadius: BorderRadius.circular(12)),
                                 ),
                                 child: Text(l10n.confirm),
                               ),
@@ -632,22 +676,25 @@ class _CardRow extends StatelessWidget {
       {required this.icon, required this.value, this.truncate = false});
 
   @override
-  Widget build(BuildContext context) => Row(
-        children: [
-          Icon(icon,
-              size: 13,
-              color: Theme.of(context).colorScheme.onSurfaceVariant),
-          const SizedBox(width: 5),
-          Expanded(
-            child: Text(
-              value,
-              style: Theme.of(context).textTheme.bodySmall,
-              maxLines: truncate ? 1 : null,
-              overflow: truncate ? TextOverflow.ellipsis : null,
-            ),
+  Widget build(BuildContext context) {
+    final mutedFg = Theme.of(context).brightness == Brightness.dark
+        ? AppColors.mutedForegroundDark
+        : AppColors.mutedForegroundLight;
+    return Row(
+      children: [
+        Icon(icon, size: 13, color: mutedFg),
+        const SizedBox(width: 5),
+        Expanded(
+          child: Text(
+            value,
+            style: TextStyle(fontSize: 12.5, color: mutedFg),
+            maxLines: truncate ? 1 : null,
+            overflow: truncate ? TextOverflow.ellipsis : null,
           ),
-        ],
-      );
+        ),
+      ],
+    );
+  }
 }
 
 // ─── Order detail sheet ───────────────────────────────────────────────────────
@@ -662,7 +709,10 @@ class _OrderDetailSheet extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
-    final theme = Theme.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final mutedFg = isDark
+        ? AppColors.mutedForegroundDark
+        : AppColors.mutedForegroundLight;
     final total = order.totalPrice ??
         ((order.medicinesTotal ?? 0.0) + (order.deliveryPrice ?? 0.0));
 
@@ -673,17 +723,22 @@ class _OrderDetailSheet extends ConsumerWidget {
       expand: false,
       builder: (_, scroll) => Column(
         children: [
+          // Handle
           Container(
-            width: 40,
+            width: 48,
             height: 4,
-            margin: const EdgeInsets.symmetric(vertical: 10),
+            margin: const EdgeInsets.symmetric(vertical: 14),
             decoration: BoxDecoration(
-              color: theme.colorScheme.outline.withValues(alpha: 0.4),
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.15)
+                  : Colors.black.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
+
+          // Header
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -693,17 +748,19 @@ class _OrderDetailSheet extends ConsumerWidget {
                     children: [
                       Text(
                         '#${order.token.toUpperCase()}',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'monospace',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.3,
+                          color: isDark
+                              ? AppColors.foregroundDark
+                              : AppColors.foregroundLight,
                         ),
                       ),
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 3),
                       Text(
                         _fmtDate(order.createdAt),
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
+                        style: TextStyle(fontSize: 12, color: mutedFg),
                       ),
                     ],
                   ),
@@ -712,100 +769,119 @@ class _OrderDetailSheet extends ConsumerWidget {
               ],
             ),
           ),
-          const Divider(height: 1),
 
+          // Scrollable content
           Expanded(
             child: ListView(
               controller: scroll,
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
               children: [
+                // Share link
                 if (_canShare && order.orderUrl != null) ...[
                   _ShareLinkCard(url: order.orderUrl!, l10n: l10n),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
                 ],
 
+                // Comment
                 if (order.pharmacyComment != null &&
                     order.pharmacyComment!.isNotEmpty) ...[
-                  _SectionTitle(l10n.orderCommentLbl),
-                  _SectionCard(children: [
-                    _DetailRow(
-                      icon: Icons.comment_outlined,
-                      label: l10n.orderCommentLbl,
-                      value: order.pharmacyComment!,
-                    ),
-                  ]),
-                  const SizedBox(height: 12),
+                  _SheetSection(
+                    title: l10n.orderCommentLbl,
+                    rows: [
+                      _SheetRow(
+                        icon: Icons.comment_outlined,
+                        label: l10n.orderCommentLbl,
+                        value: order.pharmacyComment!,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
                 ],
 
+                // Customer
                 if (order.customerName != null ||
                     order.customerPhone != null ||
                     order.customerAddress != null ||
                     order.customerComment != null) ...[
-                  _SectionTitle(l10n.customer),
-                  _SectionCard(children: [
-                    if (order.customerName != null)
-                      _DetailRow(
+                  _SheetSection(
+                    title: l10n.customer,
+                    rows: [
+                      if (order.customerName != null)
+                        _SheetRow(
                           icon: Icons.person_outline,
                           label: l10n.customer,
-                          value: order.customerName!),
-                    if (order.customerPhone != null)
-                      _PhoneRow(
-                          phone: order.customerPhone!, l10n: l10n),
-                    if (order.customerAddress != null)
-                      _DetailRow(
+                          value: order.customerName!,
+                        ),
+                      if (order.customerPhone != null)
+                        _SheetPhoneRow(
+                            phone: order.customerPhone!, l10n: l10n),
+                      if (order.customerAddress != null)
+                        _SheetRow(
                           icon: Icons.location_on_outlined,
                           label: l10n.address,
-                          value: order.customerAddress!),
-                    if (order.customerComment != null &&
-                        order.customerComment!.isNotEmpty)
-                      _DetailRow(
+                          value: order.customerAddress!,
+                        ),
+                      if (order.customerComment != null &&
+                          order.customerComment!.isNotEmpty)
+                        _SheetRow(
                           icon: Icons.chat_bubble_outline,
                           label: l10n.customerCommentLbl,
-                          value: order.customerComment!),
-                  ]),
-                  const SizedBox(height: 12),
+                          value: order.customerComment!,
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
                 ],
 
+                // Cost
                 if (order.medicinesTotal != null ||
                     order.deliveryPrice != null) ...[
-                  _SectionTitle(l10n.totalCost),
-                  _SectionCard(children: [
-                    if (order.medicinesTotal != null)
-                      _DetailRow(
+                  _SheetSection(
+                    title: l10n.totalCost,
+                    rows: [
+                      if (order.medicinesTotal != null)
+                        _SheetRow(
                           icon: Icons.shopping_bag_outlined,
                           label: l10n.orderAmountLbl,
-                          value: _fmtAmount(order.medicinesTotal)),
-                    if (order.deliveryPrice != null)
-                      _DetailRow(
+                          value: _fmtAmount(order.medicinesTotal),
+                        ),
+                      if (order.deliveryPrice != null)
+                        _SheetRow(
                           icon: Icons.delivery_dining,
                           label: l10n.deliveryCost,
-                          value: _fmtAmount(order.deliveryPrice)),
-                    if (total > 0)
-                      _DetailRow(
-                        icon: Icons.receipt_outlined,
-                        label: l10n.totalAmountLbl,
-                        value: _fmtAmount(total),
-                        bold: true,
-                        valueColor: AppColors.primary,
-                      ),
-                  ]),
-                  const SizedBox(height: 12),
+                          value: _fmtAmount(order.deliveryPrice),
+                        ),
+                      if (total > 0)
+                        _SheetRow(
+                          icon: Icons.receipt_outlined,
+                          label: l10n.totalAmountLbl,
+                          value: _fmtAmount(total),
+                          bold: true,
+                          valueColor: AppColors.primary,
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
                 ],
 
+                // Courier
                 if (order.courierType != null) ...[
-                  _SectionTitle(l10n.courier),
-                  _SectionCard(children: [
-                    _DetailRow(
+                  _SheetSection(
+                    title: l10n.courier,
+                    rows: [
+                      _SheetRow(
                         icon: Icons.local_shipping_outlined,
                         label: l10n.courier,
-                        value: order.courierType!),
-                    if (order.trackingUrl != null)
-                      _TrackingRow(
-                          url: order.trackingUrl!, l10n: l10n),
-                  ]),
-                  const SizedBox(height: 12),
+                        value: order.courierType!,
+                      ),
+                      if (order.trackingUrl != null)
+                        _TrackingRow(url: order.trackingUrl!, l10n: l10n),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
                 ],
 
+                // Actions
                 if (order.status == 'pending' ||
                     order.status == 'awaiting_confirmation')
                   _ActionButtons(order: order, ref: ref, l10n: l10n),
@@ -818,333 +894,234 @@ class _OrderDetailSheet extends ConsumerWidget {
   }
 }
 
-// ─── Filter sheet (courier + date only) ──────────────────────────────────────
+// ─── Sheet section container ──────────────────────────────────────────────────
 
-class _OrderFilterSheet extends StatefulWidget {
-  final OrdersFilter current;
-  final void Function(OrdersFilter) onApply;
-  final VoidCallback onClear;
-
-  const _OrderFilterSheet({
-    required this.current,
-    required this.onApply,
-    required this.onClear,
-  });
-
-  @override
-  State<_OrderFilterSheet> createState() => _OrderFilterSheetState();
-}
-
-class _OrderFilterSheetState extends State<_OrderFilterSheet> {
-  late List<String> _couriers;
-  DateTime? _dateFrom;
-  DateTime? _dateTo;
-
-  bool _courierExpanded = true;
-  bool _dateExpanded = false;
-
-  static const _allCouriers = ['yandex', 'noor', 'millennium'];
-
-  @override
-  void initState() {
-    super.initState();
-    _couriers = List.from(widget.current.couriers);
-    _dateFrom = widget.current.dateFrom;
-    _dateTo = widget.current.dateTo;
-  }
-
-  Future<void> _pickDate(bool isFrom) async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: (isFrom ? _dateFrom : _dateTo) ?? DateTime.now(),
-      firstDate: DateTime(2023),
-      lastDate: DateTime.now().add(const Duration(days: 1)),
-    );
-    if (picked != null) {
-      setState(() => isFrom ? _dateFrom = picked : _dateTo = picked);
-    }
-  }
-
-  int get _activeFilterCount =>
-      _couriers.length +
-      (_dateFrom != null ? 1 : 0) +
-      (_dateTo != null ? 1 : 0);
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final theme = Theme.of(context);
-
-    return DraggableScrollableSheet(
-      initialChildSize: 0.6,
-      minChildSize: 0.4,
-      maxChildSize: 0.9,
-      expand: false,
-      builder: (_, scroll) => Column(
-        children: [
-          Container(
-            width: 40,
-            height: 4,
-            margin: const EdgeInsets.symmetric(vertical: 10),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.outline.withValues(alpha: 0.4),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(
-              children: [
-                Text(l10n.filter,
-                    style: theme.textTheme.titleMedium
-                        ?.copyWith(fontWeight: FontWeight.bold)),
-                if (_activeFilterCount > 0) ...[
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 7, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text('$_activeFilterCount',
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold)),
-                  ),
-                ],
-                const Spacer(),
-                TextButton(
-                  onPressed: () {
-                    widget.onClear();
-                    Navigator.pop(context);
-                  },
-                  child: Text(l10n.clear),
-                ),
-              ],
-            ),
-          ),
-          const Divider(height: 1),
-
-          Expanded(
-            child: ListView(
-              controller: scroll,
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-              children: [
-                _FilterSection(
-                  title: l10n.courier,
-                  count: _couriers.length,
-                  expanded: _courierExpanded,
-                  onToggle: () =>
-                      setState(() => _courierExpanded = !_courierExpanded),
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: _allCouriers.map((c) {
-                      final sel = _couriers.contains(c);
-                      return _ToggleChip(
-                        label: c[0].toUpperCase() + c.substring(1),
-                        selected: sel,
-                        color: AppColors.primary,
-                        onTap: () => setState(() =>
-                            sel ? _couriers.remove(c) : _couriers.add(c)),
-                      );
-                    }).toList(),
-                  ),
-                ),
-                const SizedBox(height: 8),
-
-                _FilterSection(
-                  title: l10n.dateRange,
-                  count: (_dateFrom != null ? 1 : 0) +
-                      (_dateTo != null ? 1 : 0),
-                  expanded: _dateExpanded,
-                  onToggle: () =>
-                      setState(() => _dateExpanded = !_dateExpanded),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          icon: const Icon(Icons.calendar_today,
-                              size: 15),
-                          label: Text(
-                            _dateFrom != null ? _fmt(_dateFrom!) : l10n.from,
-                            style: const TextStyle(fontSize: 13),
-                          ),
-                          onPressed: () => _pickDate(true),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          icon: const Icon(Icons.calendar_today,
-                              size: 15),
-                          label: Text(
-                            _dateTo != null ? _fmt(_dateTo!) : l10n.to,
-                            style: const TextStyle(fontSize: 13),
-                          ),
-                          onPressed: () => _pickDate(false),
-                        ),
-                      ),
-                      if (_dateFrom != null || _dateTo != null)
-                        IconButton(
-                          icon: const Icon(Icons.clear, size: 16),
-                          onPressed: () => setState(
-                              () { _dateFrom = null; _dateTo = null; }),
-                        ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          Padding(
-            padding: EdgeInsets.fromLTRB(
-                16, 8, 16, MediaQuery.of(context).viewInsets.bottom + 16),
-            child: SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: ElevatedButton(
-                onPressed: () {
-                  widget.onApply(OrdersFilter(
-                    search: widget.current.search,
-                    statuses: widget.current.statuses,
-                    couriers: _couriers,
-                    dateFrom: _dateFrom,
-                    dateTo: _dateTo,
-                  ));
-                  Navigator.pop(context);
-                },
-                child: Text(l10n.apply),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _fmt(DateTime dt) =>
-      '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}';
-}
-
-class _FilterSection extends StatelessWidget {
+class _SheetSection extends StatelessWidget {
   final String title;
-  final int count;
-  final bool expanded;
-  final VoidCallback onToggle;
-  final Widget child;
+  final List<Widget> rows;
 
-  const _FilterSection({
-    required this.title,
-    required this.count,
-    required this.expanded,
-    required this.onToggle,
-    required this.child,
-  });
+  const _SheetSection({required this.title, required this.rows});
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(
-            color: theme.colorScheme.outline.withValues(alpha: 0.3)),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        children: [
-          InkWell(
-            onTap: onToggle,
-            borderRadius: BorderRadius.circular(12),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 16, vertical: 12),
-              child: Row(
-                children: [
-                  Text(title.toUpperCase(),
-                      style: theme.textTheme.labelSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.5)),
-                  if (count > 0) ...[
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 1),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text('$count',
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold)),
-                    ),
-                  ],
-                  const Spacer(),
-                  Icon(
-                    expanded
-                        ? Icons.keyboard_arrow_up
-                        : Icons.keyboard_arrow_down,
-                    size: 18,
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ],
-              ),
-            ),
-          ),
-          if (expanded) ...[
-            Divider(
-                height: 1,
-                color: theme.colorScheme.outline.withValues(alpha: 0.3)),
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: child,
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final mutedFg = isDark
+        ? AppColors.mutedForegroundDark
+        : AppColors.mutedForegroundLight;
 
-class _ToggleChip extends StatelessWidget {
-  final String label;
-  final bool selected;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _ToggleChip({
-    required this.label,
-    required this.selected,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) => GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-          decoration: BoxDecoration(
-            color: selected ? color : color.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-                color: selected ? color : color.withValues(alpha: 0.3)),
-          ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 8),
           child: Text(
-            label,
+            title.toUpperCase(),
             style: TextStyle(
-              fontSize: 13,
+              fontSize: 10.5,
               fontWeight: FontWeight.w600,
-              color: selected ? Colors.white : color,
+              letterSpacing: 0.8,
+              color: mutedFg,
             ),
           ),
         ),
-      );
+        Container(
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.cardDark : Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isDark ? AppColors.borderDark : AppColors.borderLight,
+            ),
+          ),
+          child: Column(
+            children: rows.asMap().entries.map((entry) {
+              final isLast = entry.key == rows.length - 1;
+              return Column(
+                children: [
+                  entry.value,
+                  if (!isLast)
+                    Divider(
+                      height: 1,
+                      indent: 16,
+                      endIndent: 16,
+                      color: isDark
+                          ? AppColors.borderDark
+                          : AppColors.borderLight,
+                    ),
+                ],
+              );
+            }).toList(),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ─── Sheet row ────────────────────────────────────────────────────────────────
+
+class _SheetRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final bool bold;
+  final Color? valueColor;
+
+  const _SheetRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.bold = false,
+    this.valueColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final mutedFg = isDark
+        ? AppColors.mutedForegroundDark
+        : AppColors.mutedForegroundLight;
+    final fg =
+        isDark ? AppColors.foregroundDark : AppColors.foregroundLight;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 16, color: AppColors.primary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(label,
+                style: TextStyle(fontSize: 13, color: mutedFg)),
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
+                color: valueColor ?? fg,
+              ),
+              textAlign: TextAlign.end,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Phone row inside sheet ───────────────────────────────────────────────────
+
+class _SheetPhoneRow extends StatelessWidget {
+  final String phone;
+  final AppL10n l10n;
+  const _SheetPhoneRow({required this.phone, required this.l10n});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final mutedFg = isDark
+        ? AppColors.mutedForegroundDark
+        : AppColors.mutedForegroundLight;
+    return GestureDetector(
+      onTap: () async {
+        final uri = Uri(scheme: 'tel', path: phone);
+        if (await canLaunchUrl(uri)) await launchUrl(uri);
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+        child: Row(
+          children: [
+            const Icon(Icons.phone_outlined,
+                size: 16, color: AppColors.primary),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(l10n.phone,
+                  style: TextStyle(fontSize: 13, color: mutedFg)),
+            ),
+            Text(
+              phone,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.primary,
+                decoration: TextDecoration.underline,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Tracking row ─────────────────────────────────────────────────────────────
+
+class _TrackingRow extends StatelessWidget {
+  final String url;
+  final AppL10n l10n;
+  const _TrackingRow({required this.url, required this.l10n});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final mutedFg = isDark
+        ? AppColors.mutedForegroundDark
+        : AppColors.mutedForegroundLight;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+      child: Row(
+        children: [
+          const Icon(Icons.link, size: 16, color: AppColors.primary),
+          const SizedBox(width: 12),
+          Expanded(
+              child: Text(l10n.trackingLink,
+                  style: TextStyle(fontSize: 13, color: mutedFg))),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              GestureDetector(
+                onTap: () {
+                  Clipboard.setData(ClipboardData(text: url));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(l10n.copied)));
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.copy,
+                      size: 14, color: AppColors.primary),
+                ),
+              ),
+              const SizedBox(width: 6),
+              GestureDetector(
+                onTap: () async {
+                  final uri = Uri.tryParse(url);
+                  if (uri != null) {
+                    await launchUrl(uri, mode: LaunchMode.inAppWebView);
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.open_in_new,
+                      size: 14, color: AppColors.primary),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // ─── Share link card ──────────────────────────────────────────────────────────
@@ -1156,32 +1133,42 @@ class _ShareLinkCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(12),
-        border:
-            Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
+        color: AppColors.primary.withValues(alpha: isDark ? 0.1 : 0.06),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+            color: AppColors.primary.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.link, color: AppColors.primary, size: 18),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.link,
+                color: AppColors.primary, size: 16),
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(l10n.shareOrderLink,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w600,
-                    )),
+                    style: const TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600)),
                 Text(url,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      fontFamily: 'monospace',
-                      color: theme.colorScheme.onSurfaceVariant,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isDark
+                          ? AppColors.mutedForegroundDark
+                          : AppColors.mutedForegroundLight,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis),
@@ -1190,7 +1177,7 @@ class _ShareLinkCard extends StatelessWidget {
           ),
           IconButton(
             icon: const Icon(Icons.copy,
-                size: 18, color: AppColors.primary),
+                size: 17, color: AppColors.primary),
             onPressed: () {
               Clipboard.setData(ClipboardData(text: url));
               ScaffoldMessenger.of(context)
@@ -1201,7 +1188,7 @@ class _ShareLinkCard extends StatelessWidget {
           ),
           IconButton(
             icon: const Icon(Icons.open_in_new,
-                size: 18, color: AppColors.primary),
+                size: 17, color: AppColors.primary),
             onPressed: () async {
               final uri = Uri.tryParse(url);
               if (uri != null) {
@@ -1217,90 +1204,6 @@ class _ShareLinkCard extends StatelessWidget {
   }
 }
 
-// ─── Phone row ────────────────────────────────────────────────────────────────
-
-class _PhoneRow extends StatelessWidget {
-  final String phone;
-  final AppL10n l10n;
-  const _PhoneRow({required this.phone, required this.l10n});
-
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        child: Row(
-          children: [
-            const Icon(Icons.phone_outlined,
-                size: 18, color: AppColors.primary),
-            const SizedBox(width: 10),
-            Text('${l10n.phone}: ',
-                style: Theme.of(context).textTheme.bodySmall),
-            Expanded(
-              child: GestureDetector(
-                onTap: () async {
-                  final uri = Uri(scheme: 'tel', path: phone);
-                  if (await canLaunchUrl(uri)) await launchUrl(uri);
-                },
-                child: Text(
-                  phone,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w500,
-                        decoration: TextDecoration.underline,
-                      ),
-                  textAlign: TextAlign.end,
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-}
-
-// ─── Tracking row ─────────────────────────────────────────────────────────────
-
-class _TrackingRow extends StatelessWidget {
-  final String url;
-  final AppL10n l10n;
-  const _TrackingRow({required this.url, required this.l10n});
-
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        child: Row(
-          children: [
-            const Icon(Icons.link, size: 18, color: AppColors.primary),
-            const SizedBox(width: 10),
-            Expanded(
-                child: Text(l10n.trackingLink,
-                    style: Theme.of(context).textTheme.bodySmall)),
-            TextButton.icon(
-              onPressed: () async {
-                final uri = Uri.tryParse(url);
-                if (uri != null) {
-                  await launchUrl(uri, mode: LaunchMode.inAppWebView);
-                }
-              },
-              icon: const Icon(Icons.open_in_new, size: 14),
-              label: Text(l10n.openLink,
-                  style: const TextStyle(fontSize: 12)),
-              style: TextButton.styleFrom(
-                foregroundColor: AppColors.primary,
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-              ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.copy, size: 16),
-              onPressed: () {
-                Clipboard.setData(ClipboardData(text: url));
-                ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(l10n.copied)));
-              },
-            ),
-          ],
-        ),
-      );
-}
-
 // ─── Action buttons ───────────────────────────────────────────────────────────
 
 class _ActionButtons extends StatelessWidget {
@@ -1311,37 +1214,41 @@ class _ActionButtons extends StatelessWidget {
       {required this.order, required this.ref, required this.l10n});
 
   @override
-  Widget build(BuildContext context) => Row(
+  Widget build(BuildContext context) => Column(
         children: [
-          Expanded(
-            child: OutlinedButton(
-              onPressed: () => _cancel(context),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.error,
-                side: const BorderSide(color: AppColors.error),
-                minimumSize: const Size(0, 48),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-              ),
-              child: Text(l10n.cancel),
-            ),
-          ),
-          if (order.status == 'awaiting_confirmation') ...[
-            const SizedBox(width: 12),
-            Expanded(
-              child: ElevatedButton(
+          if (order.status == 'awaiting_confirmation')
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
                 onPressed: () => _confirm(context),
+                icon: const Icon(Icons.check_circle_outline, size: 18),
+                label: Text(l10n.confirm),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.success,
                   foregroundColor: Colors.white,
-                  minimumSize: const Size(0, 48),
+                  minimumSize: const Size(0, 52),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(16)),
                 ),
-                child: Text(l10n.confirm),
               ),
             ),
-          ],
+          if (order.status == 'awaiting_confirmation')
+            const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => _cancel(context),
+              icon: const Icon(Icons.cancel_outlined, size: 18),
+              label: Text(l10n.cancel),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.error,
+                side: const BorderSide(color: AppColors.error),
+                minimumSize: const Size(0, 52),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
+              ),
+            ),
+          ),
         ],
       );
 
@@ -1380,73 +1287,266 @@ class _ActionButtons extends StatelessWidget {
   }
 }
 
-// ─── Shared helpers ───────────────────────────────────────────────────────────
+// ─── Filter sheet ─────────────────────────────────────────────────────────────
 
-class _SectionTitle extends StatelessWidget {
-  final String text;
-  const _SectionTitle(this.text);
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 6),
-        child: Text(text,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.4,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                )),
-      );
-}
+class _OrderFilterSheet extends StatefulWidget {
+  final OrdersFilter current;
+  final void Function(OrdersFilter) onApply;
+  final VoidCallback onClear;
 
-class _SectionCard extends StatelessWidget {
-  final List<Widget> children;
-  const _SectionCard({required this.children});
-  @override
-  Widget build(BuildContext context) => Card(
-        margin: const EdgeInsets.only(bottom: 4),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Column(children: children),
-        ),
-      );
-}
-
-class _DetailRow extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-  final bool bold;
-  final Color? valueColor;
-
-  const _DetailRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-    this.bold = false,
-    this.valueColor,
+  const _OrderFilterSheet({
+    required this.current,
+    required this.onApply,
+    required this.onClear,
   });
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, size: 18, color: AppColors.primary),
-            const SizedBox(width: 10),
-            Text('$label: ',
-                style: Theme.of(context).textTheme.bodySmall),
-            Expanded(
-              child: Text(
-                value,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight:
-                          bold ? FontWeight.bold : FontWeight.w500,
-                      color: valueColor,
+  State<_OrderFilterSheet> createState() => _OrderFilterSheetState();
+}
+
+class _OrderFilterSheetState extends State<_OrderFilterSheet> {
+  late List<String> _couriers;
+  DateTime? _dateFrom;
+  DateTime? _dateTo;
+
+  static const _allCouriers = ['yandex', 'noor', 'millennium'];
+
+  @override
+  void initState() {
+    super.initState();
+    _couriers = List.from(widget.current.couriers);
+    _dateFrom = widget.current.dateFrom;
+    _dateTo = widget.current.dateTo;
+  }
+
+  Future<void> _pickDate(bool isFrom) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: (isFrom ? _dateFrom : _dateTo) ?? DateTime.now(),
+      firstDate: DateTime(2023),
+      lastDate: DateTime.now().add(const Duration(days: 1)),
+    );
+    if (picked != null) {
+      setState(() => isFrom ? _dateFrom = picked : _dateTo = picked);
+    }
+  }
+
+  int get _activeFilterCount =>
+      _couriers.length +
+      (_dateFrom != null ? 1 : 0) +
+      (_dateTo != null ? 1 : 0);
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final mutedFg = isDark
+        ? AppColors.mutedForegroundDark
+        : AppColors.mutedForegroundLight;
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.6,
+      minChildSize: 0.4,
+      maxChildSize: 0.9,
+      expand: false,
+      builder: (_, scroll) => Column(
+        children: [
+          Container(
+            width: 48,
+            height: 4,
+            margin: const EdgeInsets.symmetric(vertical: 14),
+            decoration: BoxDecoration(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.15)
+                  : Colors.black.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              children: [
+                Text(l10n.filter,
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(fontWeight: FontWeight.bold)),
+                if (_activeFilterCount > 0) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(100),
                     ),
-                textAlign: TextAlign.end,
+                    child: Text('$_activeFilterCount',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold)),
+                  ),
+                ],
+                const Spacer(),
+                TextButton(
+                  onPressed: () {
+                    widget.onClear();
+                    Navigator.pop(context);
+                  },
+                  child: Text(l10n.clear),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 4),
+          Expanded(
+            child: ListView(
+              controller: scroll,
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+              children: [
+                // Courier section
+                Padding(
+                  padding: const EdgeInsets.only(left: 4, bottom: 8),
+                  child: Text(
+                    l10n.courier.toUpperCase(),
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.8,
+                      color: mutedFg,
+                    ),
+                  ),
+                ),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _allCouriers.map((c) {
+                    final sel = _couriers.contains(c);
+                    return _ToggleChip(
+                      label: c[0].toUpperCase() + c.substring(1),
+                      selected: sel,
+                      color: AppColors.primary,
+                      onTap: () => setState(() =>
+                          sel ? _couriers.remove(c) : _couriers.add(c)),
+                    );
+                  }).toList(),
+                ),
+
+                const SizedBox(height: 20),
+
+                // Date section
+                Padding(
+                  padding: const EdgeInsets.only(left: 4, bottom: 8),
+                  child: Text(
+                    l10n.dateRange.toUpperCase(),
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.8,
+                      color: mutedFg,
+                    ),
+                  ),
+                ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.calendar_today, size: 15),
+                        label: Text(
+                          _dateFrom != null ? _fmt(_dateFrom!) : l10n.from,
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                        onPressed: () => _pickDate(true),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.calendar_today, size: 15),
+                        label: Text(
+                          _dateTo != null ? _fmt(_dateTo!) : l10n.to,
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                        onPressed: () => _pickDate(false),
+                      ),
+                    ),
+                    if (_dateFrom != null || _dateTo != null)
+                      IconButton(
+                        icon: const Icon(Icons.clear, size: 16),
+                        onPressed: () => setState(
+                            () {
+                              _dateFrom = null;
+                              _dateTo = null;
+                            }),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+                16, 8, 16, MediaQuery.of(context).viewInsets.bottom + 16),
+            child: SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton(
+                onPressed: () {
+                  widget.onApply(OrdersFilter(
+                    search: widget.current.search,
+                    statuses: widget.current.statuses,
+                    couriers: _couriers,
+                    dateFrom: _dateFrom,
+                    dateTo: _dateTo,
+                  ));
+                  Navigator.pop(context);
+                },
+                child: Text(l10n.apply),
               ),
             ),
-          ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _fmt(DateTime dt) =>
+      '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}';
+}
+
+class _ToggleChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _ToggleChip({
+    required this.label,
+    required this.selected,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: selected ? color : color.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(100),
+            border: Border.all(
+                color: selected ? color : color.withValues(alpha: 0.25)),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: selected ? Colors.white : color,
+            ),
+          ),
         ),
       );
 }

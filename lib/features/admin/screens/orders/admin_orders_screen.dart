@@ -185,11 +185,12 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
                 controller: _tabController,
                 isScrollable: true,
                 tabAlignment: TabAlignment.start,
-                labelPadding: const EdgeInsets.symmetric(horizontal: 16),
-                labelStyle:
-                    const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                unselectedLabelStyle: const TextStyle(fontSize: 13),
-                indicatorWeight: 2.5,
+                labelPadding: const EdgeInsets.symmetric(horizontal: 14),
+                labelStyle: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+                unselectedLabelStyle: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500),
+                indicatorWeight: 2,
+                indicatorColor: AppColors.primary,
+                dividerColor: Colors.transparent,
                 tabs: _tabStatuses
                     .map((s) => Tab(text: _tabLabel(s, l10n)))
                     .toList(),
@@ -222,12 +223,12 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
                   }).toList(),
                 ),
       floatingActionButton: canCreate
-          ? FloatingActionButton.extended(
+          ? FloatingActionButton(
               onPressed: _openCreate,
               backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
-              icon: const Icon(Icons.add),
-              label: Text(l10n.adminCreateOrder),
+              shape: const CircleBorder(),
+              child: const Icon(Icons.add, size: 26),
             )
           : null,
     );

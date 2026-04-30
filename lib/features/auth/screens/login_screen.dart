@@ -26,9 +26,10 @@ class _LanguageSwitcher extends ConsumerWidget {
       icon: Icon(
         Icons.language_outlined,
         color: Theme.of(context).colorScheme.onSurfaceVariant,
+        size: 20,
       ),
       tooltip: 'Language',
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       onSelected: (code) =>
           ref.read(localeProvider.notifier).setLocale(Locale(code)),
       itemBuilder: (_) => _langs
@@ -44,14 +45,12 @@ class _LanguageSwitcher extends ConsumerWidget {
                         fontWeight: current == lang.$1
                             ? FontWeight.w600
                             : FontWeight.normal,
-                        color:
-                            current == lang.$1 ? AppColors.primary : null,
+                        color: current == lang.$1 ? AppColors.primary : null,
                       ),
                     ),
                   ),
                   if (current == lang.$1)
-                    const Icon(Icons.check,
-                        size: 16, color: AppColors.primary),
+                    const Icon(Icons.check, size: 16, color: AppColors.primary),
                 ],
               ),
             ),
@@ -83,7 +82,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (!_localeInitialized) {
       _localeInitialized = true;
       final saved = ref.read(localeProvider).languageCode;
-      // Auto-apply device locale only if no preference saved yet
       if (saved == 'ru') {
         final deviceLang =
             WidgetsBinding.instance.platformDispatcher.locale.languageCode;
@@ -162,57 +160,69 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // Theme toggle + language switcher
-                Align(
-                  alignment: Alignment.topRight,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: Icon(
-                          isDark ? Icons.light_mode : Icons.dark_mode,
-                          color:
-                              Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                        onPressed: () =>
-                            ref.read(themeModeProvider.notifier).toggle(),
+                // Top bar: theme toggle + language
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    IconButton(
+                      icon: Icon(
+                        isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        size: 20,
                       ),
-                      const _LanguageSwitcher(),
-                    ],
-                  ),
+                      onPressed: () =>
+                          ref.read(themeModeProvider.notifier).toggle(),
+                    ),
+                    const _LanguageSwitcher(),
+                  ],
                 ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 32),
 
-                // Logo with tap detector for env switch
+                // Logo
                 GestureDetector(
                   onTap: _onLogoTap,
                   child: Column(
                     children: [
-                      SvgPicture.asset(
-                        'assets/images/logo.svg',
-                        width: 80,
-                        height: 80,
+                      Container(
+                        width: 88,
+                        height: 88,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: isDark ? 0.12 : 0.08),
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(
+                            color: AppColors.primary.withValues(alpha: 0.2),
+                          ),
+                        ),
+                        child: Center(
+                          child: SvgPicture.asset(
+                            'assets/images/logo.svg',
+                            width: 52,
+                            height: 52,
+                          ),
+                        ),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 16),
                       RichText(
                         text: TextSpan(
                           style: const TextStyle(
-                            fontSize: 28,
+                            fontSize: 30,
                             fontWeight: FontWeight.w800,
-                            letterSpacing: -1,
+                            letterSpacing: -1.2,
                           ),
                           children: [
                             TextSpan(
                               text: 'tez',
                               style: TextStyle(
-                                color: isDark ? Colors.white : const Color(0xFF1a1a18),
+                                color: isDark
+                                    ? AppColors.foregroundDark
+                                    : AppColors.foregroundLight,
                               ),
                             ),
                             const TextSpan(
@@ -231,102 +241,126 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                 ),
 
+                const SizedBox(height: 36),
 
-                const SizedBox(height: 28),
-
-                // Title
-                Text(
-                  isAdmin ? l10n.adminLoginTitle : l10n.loginTitle,
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  l10n.loginHint,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-
-                const SizedBox(height: 28),
-
-                // Error
-                if (authState.error != null) ...[
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppColors.error.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                          color: AppColors.error.withValues(alpha: 0.3)),
+                // Glass form card
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppColors.cardDark : Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: isDark ? AppColors.borderDark : AppColors.borderLight,
                     ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.error_outline,
-                            color: AppColors.error, size: 18),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            authState.error!,
-                            style: const TextStyle(
-                                color: AppColors.error, fontSize: 13),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.06),
+                        blurRadius: 24,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Title
+                      Text(
+                        isAdmin ? l10n.adminLoginTitle : l10n.loginTitle,
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        l10n.loginHint,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // Error
+                      if (authState.error != null) ...[
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppColors.error.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                                color: AppColors.error.withValues(alpha: 0.25)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.error_outline,
+                                  color: AppColors.error, size: 18),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  authState.error!,
+                                  style: const TextStyle(
+                                      color: AppColors.error, fontSize: 13),
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: () => ref
+                                    .read(authStateProvider.notifier)
+                                    .clearError(),
+                                child: const Icon(Icons.close,
+                                    color: AppColors.error, size: 16),
+                              ),
+                            ],
                           ),
                         ),
-                        GestureDetector(
-                          onTap: () =>
-                              ref.read(authStateProvider.notifier).clearError(),
-                          child: const Icon(Icons.close,
-                              color: AppColors.error, size: 16),
-                        ),
+                        const SizedBox(height: 16),
                       ],
-                    ),
+
+                      // Login field
+                      CustomTextField(
+                        label: isAdmin ? 'Email' : l10n.loginFieldLbl,
+                        controller: _loginController,
+                        keyboardType: isAdmin
+                            ? TextInputType.emailAddress
+                            : TextInputType.text,
+                        textInputAction: TextInputAction.next,
+                        prefixIcon: Icon(
+                            isAdmin ? Icons.email_outlined : Icons.person_outline),
+                        onSubmitted: (_) =>
+                            FocusScope.of(context).requestFocus(_passwordFocus),
+                        validator: (v) {
+                          if (v == null || v.trim().isEmpty) {
+                            return l10n.enterLoginHint;
+                          }
+                          return null;
+                        },
+                      ),
+
+                      const SizedBox(height: 14),
+
+                      // Password field
+                      CustomTextField(
+                        label: l10n.passwordLbl,
+                        controller: _passwordController,
+                        isPassword: true,
+                        focusNode: _passwordFocus,
+                        textInputAction: TextInputAction.done,
+                        prefixIcon: const Icon(Icons.lock_outline),
+                        onSubmitted: (_) => _submit(),
+                        validator: (v) {
+                          if (v == null || v.isEmpty) return l10n.enterPasswordHint;
+                          return null;
+                        },
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Submit button
+                      CustomButton(
+                        label: l10n.loginBtn,
+                        isLoading: authState.isLoading,
+                        onPressed: _submit,
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 16),
-                ],
-
-                // Login field
-                CustomTextField(
-                  label: isAdmin ? 'Email' : l10n.loginFieldLbl,
-                  controller: _loginController,
-                  keyboardType: isAdmin
-                      ? TextInputType.emailAddress
-                      : TextInputType.text,
-                  textInputAction: TextInputAction.next,
-                  prefixIcon: Icon(isAdmin ? Icons.email_outlined : Icons.person_outline),
-                  onSubmitted: (_) =>
-                      FocusScope.of(context).requestFocus(_passwordFocus),
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) return l10n.enterLoginHint;
-                    return null;
-                  },
                 ),
 
-                const SizedBox(height: 16),
-
-                // Password field
-                CustomTextField(
-                  label: l10n.passwordLbl,
-                  controller: _passwordController,
-                  isPassword: true,
-                  focusNode: _passwordFocus,
-                  textInputAction: TextInputAction.done,
-                  prefixIcon: const Icon(Icons.lock_outline),
-                  onSubmitted: (_) => _submit(),
-                  validator: (v) {
-                    if (v == null || v.isEmpty) return l10n.enterPasswordHint;
-                    return null;
-                  },
-                ),
-
-                const SizedBox(height: 28),
-
-                // Submit button
-                CustomButton(
-                  label: l10n.loginBtn,
-                  isLoading: authState.isLoading,
-                  onPressed: _submit,
-                ),
-
-                const SizedBox(height: 40),
-
-                const SizedBox(height: 8),
+                const SizedBox(height: 32),
               ],
             ),
           ),

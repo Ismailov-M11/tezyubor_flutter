@@ -217,13 +217,12 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
                 controller: _tabController,
                 isScrollable: true,
                 tabAlignment: TabAlignment.start,
-                labelPadding:
-                    const EdgeInsets.symmetric(horizontal: 16),
-                labelStyle: const TextStyle(
-                    fontSize: 13, fontWeight: FontWeight.w600),
-                unselectedLabelStyle:
-                    const TextStyle(fontSize: 13),
-                indicatorWeight: 2.5,
+                labelPadding: const EdgeInsets.symmetric(horizontal: 14),
+                labelStyle: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+                unselectedLabelStyle: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500),
+                indicatorWeight: 2,
+                indicatorColor: AppColors.primary,
+                dividerColor: Colors.transparent,
                 tabs: _tabStatuses
                     .map((s) => Tab(text: _tabLabel(s, l10n)))
                     .toList(),
@@ -273,12 +272,12 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton(
         onPressed: _openCreate,
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        icon: const Icon(Icons.add),
-        label: Text(l10n.newOrder),
+        shape: const CircleBorder(),
+        child: const Icon(Icons.add, size: 26),
       ),
     );
   }

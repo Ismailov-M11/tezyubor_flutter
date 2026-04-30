@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/constants/app_colors.dart';
 import '../../../core/l10n/app_l10n.dart';
 import '../../../features/auth/models/auth_models.dart';
 import '../../../features/auth/providers/auth_provider.dart';
+import '../../../shared/widgets/pill_nav_bar.dart';
 import '../../admin/providers/admin_provider.dart';
 import 'orders/admin_orders_screen.dart';
 import 'businesses/businesses_screen.dart';
@@ -28,7 +28,6 @@ class _AdminMainScreenState extends ConsumerState<AdminMainScreen> {
   void initState() {
     super.initState();
     _currentIndex = _tabIndexFromString(widget.initialTab);
-    // Fetch fresh permissions on init
     Future.microtask(() => ref.read(adminMeProvider.notifier).load());
   }
 
@@ -69,7 +68,6 @@ class _AdminMainScreenState extends ConsumerState<AdminMainScreen> {
         label: l10n.adminActivationsTitle,
         permission: 'activations:view',
       ),
-      // Settings / Profile — always visible, no permission required
       _AdminTab(
         key: 'settings',
         icon: Icons.person_outline,
@@ -117,39 +115,23 @@ class _AdminMainScreenState extends ConsumerState<AdminMainScreen> {
     final tabs = _buildTabs(user, l10n);
     final safeIndex = _currentIndex.clamp(0, tabs.length - 1);
 
+    final navItems = tabs
+        .map((t) => PillNavItem(
+              icon: t.icon,
+              activeIcon: t.activeIcon,
+              label: t.label,
+            ))
+        .toList();
+
     return Scaffold(
       body: IndexedStack(
         index: safeIndex,
         children: tabs.map((t) => _buildPage(t.key)).toList(),
       ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          border: Border(
-            top: BorderSide(
-              color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
-              width: 0.5,
-            ),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 20,
-              offset: const Offset(0, -4),
-            ),
-          ],
-        ),
-        child: NavigationBar(
-          selectedIndex: safeIndex,
-          onDestinationSelected: (i) => setState(() => _currentIndex = i),
-          destinations: tabs
-              .map((t) => NavigationDestination(
-                    icon: Icon(t.icon),
-                    selectedIcon: Icon(t.activeIcon, color: AppColors.primary),
-                    label: t.label,
-                  ))
-              .toList(),
-        ),
+      bottomNavigationBar: PillNavBar(
+        currentIndex: safeIndex,
+        items: navItems,
+        onItemSelected: (i) => setState(() => _currentIndex = i),
       ),
     );
   }

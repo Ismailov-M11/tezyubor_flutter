@@ -519,12 +519,14 @@ class _AdminCreateOrderSheetState
     final cardBg = isDark ? AppColors.cardDark : Colors.white;
     final pharmacies = ref.watch(adminPharmaciesProvider).pharmacies;
 
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-          20, 0, 20, MediaQuery.of(context).viewInsets.bottom + 24),
-      child: SingleChildScrollView(
+    final bottom = MediaQuery.of(context).viewInsets.bottom;
+    final screenHeight = MediaQuery.of(context).size.height;
+
+    return SizedBox(
+      height: (screenHeight * 0.9 - bottom).clamp(200.0, screenHeight),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Center(
@@ -550,8 +552,7 @@ class _AdminCreateOrderSheetState
                     width: 32,
                     height: 32,
                     decoration: BoxDecoration(
-                      color:
-                          theme.colorScheme.onSurface.withValues(alpha: 0.06),
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.06),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(Icons.close,
@@ -561,7 +562,12 @@ class _AdminCreateOrderSheetState
                 ),
               ],
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
 
             _SheetSectionLabel(l10n.adminSelectPharmacy),
             const SizedBox(height: 8),
@@ -682,26 +688,32 @@ class _AdminCreateOrderSheetState
                 ],
               ),
             ),
-            const SizedBox(height: 24),
-
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton(
-                onPressed:
-                    _isLoading || _selectedPharmacyId == null ? null : _submit,
-                style: ElevatedButton.styleFrom(
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16)),
+                  const SizedBox(height: 16),
+                  ],
                 ),
-                child: _isLoading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white),
-                      )
-                    : Text(l10n.adminCreateOrder),
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.fromLTRB(0, 8, 0, bottom > 0 ? 12 : 24),
+              child: SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  onPressed:
+                      _isLoading || _selectedPharmacyId == null ? null : _submit,
+                  style: ElevatedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
+                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white),
+                        )
+                      : Text(l10n.adminCreateOrder),
+                ),
               ),
             ),
           ],
@@ -1180,6 +1192,12 @@ class _AdminOrderDetailPage extends ConsumerWidget {
                       label: l10n.address,
                       value: order.pharmacyAddress!,
                       wrapValue: true),
+                if (order.pharmacyComment != null)
+                  _DetailRow(
+                      icon: Icons.comment_outlined,
+                      label: l10n.orderCommentLbl,
+                      value: order.pharmacyComment!,
+                      wrapValue: true),
               ]),
               const SizedBox(height: 14),
             ],
@@ -1204,6 +1222,12 @@ class _AdminOrderDetailPage extends ConsumerWidget {
                       icon: Icons.location_on_outlined,
                       label: l10n.address,
                       value: order.customerAddress!,
+                      wrapValue: true),
+                if (order.customerComment != null)
+                  _DetailRow(
+                      icon: Icons.comment_outlined,
+                      label: l10n.customerCommentLbl,
+                      value: order.customerComment!,
                       wrapValue: true),
               ]),
               const SizedBox(height: 14),

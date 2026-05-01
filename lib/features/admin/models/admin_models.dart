@@ -13,6 +13,8 @@ class AdminOrder {
   final String? pharmacyName;
   final String? pharmacyAddress;
   final String? pharmacyPhone;
+  final String? pharmacyComment;
+  final String? customerComment;
   final String createdAt;
 
   const AdminOrder({
@@ -30,6 +32,8 @@ class AdminOrder {
     this.pharmacyName,
     this.pharmacyAddress,
     this.pharmacyPhone,
+    this.pharmacyComment,
+    this.customerComment,
     required this.createdAt,
   });
 
@@ -48,6 +52,8 @@ class AdminOrder {
         pharmacyName: json['pharmacyName'] as String?,
         pharmacyAddress: json['pharmacyAddress'] as String?,
         pharmacyPhone: json['pharmacyPhone'] as String?,
+        pharmacyComment: json['pharmacyComment'] as String?,
+        customerComment: json['customerComment'] as String?,
         createdAt: json['createdAt'] as String? ?? '',
       );
 }

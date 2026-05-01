@@ -136,7 +136,7 @@ class AppL10n {
   String get totalOrdersLbl =>
       _t('Всего заказов', 'Jami buyurtmalar', 'Total Orders');
   String get medicinesAmountLbl =>
-      _t('Сумма лекарств', 'Dorilar summasi', 'Medicines Amount');
+      _t('Сумма продаж', 'Savdo summasi', 'Sales Amount');
   String get deliveryRevenueLbl =>
       _t('Выручка доставки', 'Yetkazib berish daromadi', 'Delivery Revenue');
   String get totalRevenueLbl =>

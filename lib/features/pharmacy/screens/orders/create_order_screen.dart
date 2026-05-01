@@ -95,152 +95,164 @@ class _CreateOrderSheetState extends ConsumerState<CreateOrderSheet> {
     final isDark = theme.brightness == Brightness.dark;
     final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
     final cardBg = isDark ? AppColors.cardDark : Colors.white;
+    final bottom = MediaQuery.of(context).viewInsets.bottom;
+    final screenHeight = MediaQuery.of(context).size.height;
 
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        20,
-        0,
-        20,
-        MediaQuery.of(context).viewInsets.bottom + 24,
-      ),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Handle bar
-            Center(
-              child: Container(
-                width: 48,
-                height: 4,
-                margin: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.outline.withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-
-            // Title row
-            Row(
-              children: [
-                Text(
-                  l10n.newOrder,
-                  style: theme.textTheme.titleLarge
-                      ?.copyWith(fontWeight: FontWeight.w700),
-                ),
-                const Spacer(),
-                GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color:
-                          theme.colorScheme.onSurface.withValues(alpha: 0.06),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.close,
-                      size: 16,
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
+    return SizedBox(
+      height: (screenHeight * 0.9 - bottom).clamp(200.0, screenHeight),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Handle bar
+              Center(
+                child: Container(
+                  width: 48,
+                  height: 4,
+                  margin: const EdgeInsets.symmetric(vertical: 12),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.outline.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            // ЗАКАЗ section
-            const _SectionLabel('ЗАКАЗ'),
-            const SizedBox(height: 8),
-            Container(
-              decoration: BoxDecoration(
-                color: cardBg,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: borderColor),
               ),
-              child: Column(
+
+              // Title row
+              Row(
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-                    child: CustomTextField(
-                      label: '${l10n.orderCommentLbl} *',
-                      hint: l10n.orderCommentHint,
-                      controller: _commentController,
-                      prefixIcon: const Icon(Icons.comment_outlined),
-                      maxLines: 3,
-                      validator: (v) => (v == null || v.trim().isEmpty)
-                          ? l10n.fillAllFields
-                          : null,
-                    ),
+                  Text(
+                    l10n.newOrder,
+                    style: theme.textTheme.titleLarge
+                        ?.copyWith(fontWeight: FontWeight.w700),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
-                    child: CustomTextField(
-                      label: l10n.orderAmountLbl,
-                      hint: '150000',
-                      controller: _totalController,
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
-                      prefixIcon: const Icon(Icons.payments_outlined),
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) return null;
-                        final parsed =
-                            double.tryParse(v.trim().replaceAll(',', '.'));
-                        if (parsed == null || parsed < 0) {
-                          return l10n.fillAllFields;
-                        }
-                        return null;
-                      },
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.06),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.close,
+                        size: 16,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-            // КЛИЕНТ section
-            const _SectionLabel('КЛИЕНТ'),
-            const SizedBox(height: 8),
-            Container(
-              decoration: BoxDecoration(
-                color: cardBg,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: borderColor),
-              ),
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-                    child: CustomTextField(
-                      label: l10n.customer,
-                      controller: _nameController,
-                      prefixIcon: const Icon(Icons.person_outline),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
-                    child: CustomTextField(
-                      label: l10n.phone,
-                      controller: _phoneController,
-                      keyboardType: TextInputType.phone,
-                      prefixIcon: const Icon(Icons.phone_outlined),
-                      inputFormatters: [UzPhoneFormatter()],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
+              // Scrollable form content
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // ЗАКАЗ section
+                      const _SectionLabel('ЗАКАЗ'),
+                      const SizedBox(height: 8),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: cardBg,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: borderColor),
+                        ),
+                        child: Column(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+                              child: CustomTextField(
+                                label: '${l10n.orderCommentLbl} *',
+                                hint: l10n.orderCommentHint,
+                                controller: _commentController,
+                                prefixIcon: const Icon(Icons.comment_outlined),
+                                maxLines: 3,
+                                validator: (v) => (v == null || v.trim().isEmpty)
+                                    ? l10n.fillAllFields
+                                    : null,
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+                              child: CustomTextField(
+                                label: l10n.orderAmountLbl,
+                                hint: '150000',
+                                controller: _totalController,
+                                keyboardType: const TextInputType.numberWithOptions(
+                                    decimal: true),
+                                prefixIcon: const Icon(Icons.payments_outlined),
+                                validator: (v) {
+                                  if (v == null || v.trim().isEmpty) return null;
+                                  final parsed =
+                                      double.tryParse(v.trim().replaceAll(',', '.'));
+                                  if (parsed == null || parsed < 0) {
+                                    return l10n.fillAllFields;
+                                  }
+                                  return null;
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
 
-            CustomButton(
-              label: l10n.createOrder,
-              isLoading: _isLoading,
-              onPressed: _submit,
-            ),
-          ],
+                      // КЛИЕНТ section
+                      const _SectionLabel('КЛИЕНТ'),
+                      const SizedBox(height: 8),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: cardBg,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: borderColor),
+                        ),
+                        child: Column(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+                              child: CustomTextField(
+                                label: l10n.customer,
+                                controller: _nameController,
+                                prefixIcon: const Icon(Icons.person_outline),
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+                              child: CustomTextField(
+                                label: l10n.phone,
+                                controller: _phoneController,
+                                keyboardType: TextInputType.phone,
+                                prefixIcon: const Icon(Icons.phone_outlined),
+                                inputFormatters: [UzPhoneFormatter()],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Submit button — always visible above keyboard
+              Padding(
+                padding: EdgeInsets.fromLTRB(0, 8, 0, bottom > 0 ? 12 : 24),
+                child: CustomButton(
+                  label: l10n.createOrder,
+                  isLoading: _isLoading,
+                  onPressed: _submit,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

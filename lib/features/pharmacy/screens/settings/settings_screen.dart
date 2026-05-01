@@ -170,15 +170,7 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   void _showChangePassword(BuildContext context, WidgetRef ref, AppL10n l10n) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => _ChangePasswordPage(ref: ref, l10n: l10n),
-    );
+    pushRightPanel(context, _ChangePasswordPage(ref: ref, l10n: l10n));
   }
 
   Future<void> _logout(
@@ -583,47 +575,47 @@ class _ChangePasswordPageState extends State<_ChangePasswordPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = widget.l10n;
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 20, right: 20, top: 12,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _SheetHeader(title: l10n.changePasswordTitle),
-          const SizedBox(height: 16),
-          if (_error != null) _ErrorBanner(message: _error!),
-          if (_success != null) _SuccessBanner(message: _success!),
-          CustomTextField(
-            label: l10n.oldPasswordLbl,
-            controller: _oldCtrl,
-            isPassword: true,
-            textInputAction: TextInputAction.next,
-          ),
-          const SizedBox(height: 12),
-          CustomTextField(
-            label: l10n.newPasswordLbl,
-            controller: _newCtrl,
-            isPassword: true,
-            textInputAction: TextInputAction.next,
-          ),
-          const SizedBox(height: 12),
-          CustomTextField(
-            label: l10n.confirmPasswordLbl,
-            controller: _confirmCtrl,
-            isPassword: true,
-            textInputAction: TextInputAction.done,
-            onSubmitted: (_) => _save(),
-          ),
-          const SizedBox(height: 20),
-          CustomButton(
-            label: l10n.changePassword,
-            isLoading: _isLoading,
-            onPressed: _save,
-          ),
-        ],
+    return SwipeToDismiss(
+      child: Scaffold(
+        appBar: AppBar(
+          leading: const PanelBackButton(),
+          title: Text(l10n.changePasswordTitle),
+        ),
+        body: ListView(
+          padding: EdgeInsets.fromLTRB(
+              20, 16, 20, MediaQuery.of(context).viewInsets.bottom + 20),
+          children: [
+            if (_error != null) _ErrorBanner(message: _error!),
+            if (_success != null) _SuccessBanner(message: _success!),
+            CustomTextField(
+              label: l10n.oldPasswordLbl,
+              controller: _oldCtrl,
+              isPassword: true,
+              textInputAction: TextInputAction.next,
+            ),
+            const SizedBox(height: 12),
+            CustomTextField(
+              label: l10n.newPasswordLbl,
+              controller: _newCtrl,
+              isPassword: true,
+              textInputAction: TextInputAction.next,
+            ),
+            const SizedBox(height: 12),
+            CustomTextField(
+              label: l10n.confirmPasswordLbl,
+              controller: _confirmCtrl,
+              isPassword: true,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => _save(),
+            ),
+            const SizedBox(height: 20),
+            CustomButton(
+              label: l10n.changePassword,
+              isLoading: _isLoading,
+              onPressed: _save,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -805,29 +797,6 @@ class _SettingsTile extends StatelessWidget {
       onTap: onTap,
     );
   }
-}
-
-// ─── Shared sheet helpers ─────────────────────────────────────────────────────
-
-class _SheetHeader extends StatelessWidget {
-  final String title;
-  const _SheetHeader({required this.title});
-
-  @override
-  Widget build(BuildContext context) => Row(
-        children: [
-          Text(title,
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
-                  ?.copyWith(fontWeight: FontWeight.bold)),
-          const Spacer(),
-          IconButton(
-            icon: const Icon(Icons.close),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ],
-      );
 }
 
 class _ErrorBanner extends StatelessWidget {

@@ -53,8 +53,7 @@ class _StatusTabBarState extends State<StatusTabBar> {
         Scrollable.ensureVisible(
           ctx,
           alignment: 0.5,
-          duration: const Duration(milliseconds: 250),
-          curve: Curves.easeInOut,
+          duration: Duration.zero,
         );
       }
     });

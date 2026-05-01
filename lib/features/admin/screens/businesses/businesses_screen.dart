@@ -57,9 +57,14 @@ class _BusinessesScreenState extends ConsumerState<BusinessesScreen> {
   }
 
   void _openFilter() {
-    pushRightPanel(
-      context,
-      _BusinessFilterPage(
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _BusinessFilterSheet(
         currentIsActive: _filterIsActive,
         currentCourier: _filterCourier,
         onApply: (isActive, courier) {
@@ -205,15 +210,15 @@ class _BusinessesScreenState extends ConsumerState<BusinessesScreen> {
   }
 }
 
-// ─── Filter page ──────────────────────────────────────────────────────────────
+// ─── Filter sheet ─────────────────────────────────────────────────────────────
 
-class _BusinessFilterPage extends StatefulWidget {
+class _BusinessFilterSheet extends StatefulWidget {
   final String? currentIsActive;
   final String? currentCourier;
   final void Function(String? isActive, String? courier) onApply;
   final VoidCallback onClear;
 
-  const _BusinessFilterPage({
+  const _BusinessFilterSheet({
     required this.currentIsActive,
     required this.currentCourier,
     required this.onApply,
@@ -221,10 +226,10 @@ class _BusinessFilterPage extends StatefulWidget {
   });
 
   @override
-  State<_BusinessFilterPage> createState() => _BusinessFilterPageState();
+  State<_BusinessFilterSheet> createState() => _BusinessFilterSheetState();
 }
 
-class _BusinessFilterPageState extends State<_BusinessFilterPage> {
+class _BusinessFilterSheetState extends State<_BusinessFilterSheet> {
   String? _isActive;
   String? _courier;
 
@@ -243,14 +248,28 @@ class _BusinessFilterPageState extends State<_BusinessFilterPage> {
     final l10n = context.l10n;
     final theme = Theme.of(context);
 
-    return SwipeToDismiss(
-      child: Scaffold(
-        appBar: AppBar(
-          leading: const PanelBackButton(),
-          title: Row(
-            mainAxisSize: MainAxisSize.min,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 48,
+              height: 4,
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.outline.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          Row(
             children: [
-              Text(l10n.filter),
+              Text(l10n.filter,
+                  style: theme.textTheme.titleLarge
+                      ?.copyWith(fontWeight: FontWeight.w700)),
               if (_count > 0) ...[
                 const SizedBox(width: 8),
                 Container(
@@ -270,100 +289,108 @@ class _BusinessFilterPageState extends State<_BusinessFilterPage> {
                   ),
                 ),
               ],
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                widget.onClear();
-                Navigator.pop(context);
-              },
-              child: Text(l10n.clear),
-            ),
-          ],
-        ),
-        bottomNavigationBar: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            child: SizedBox(
-              height: 52,
-              child: ElevatedButton(
+              const Spacer(),
+              TextButton(
                 onPressed: () {
-                  widget.onApply(_isActive, _courier);
+                  widget.onClear();
                   Navigator.pop(context);
                 },
-                style: ElevatedButton.styleFrom(
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16)),
-                ),
-                child: Text(l10n.apply),
+                child: Text(l10n.clear,
+                    style: const TextStyle(color: AppColors.primary)),
               ),
+              GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.06),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.close,
+                      size: 16,
+                      color: theme.colorScheme.onSurfaceVariant),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            l10n.adminBusinessStatusFilter.toUpperCase(),
+            style: theme.textTheme.labelSmall?.copyWith(
+                fontWeight: FontWeight.bold, letterSpacing: 0.5),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _ToggleChip(
+                label: l10n.all,
+                selected: _isActive == null,
+                color: AppColors.primary,
+                onTap: () => setState(() => _isActive = null),
+              ),
+              _ToggleChip(
+                label: l10n.adminBusinessActive,
+                selected: _isActive == 'true',
+                color: AppColors.success,
+                onTap: () => setState(
+                    () => _isActive = _isActive == 'true' ? null : 'true'),
+              ),
+              _ToggleChip(
+                label: l10n.adminBusinessInactive,
+                selected: _isActive == 'false',
+                color: AppColors.error,
+                onTap: () => setState(
+                    () => _isActive = _isActive == 'false' ? null : 'false'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Text(
+            l10n.adminOrderCourier.toUpperCase(),
+            style: theme.textTheme.labelSmall?.copyWith(
+                fontWeight: FontWeight.bold, letterSpacing: 0.5),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _ToggleChip(
+                label: l10n.adminCourierAll,
+                selected: _courier == null,
+                color: AppColors.primary,
+                onTap: () => setState(() => _courier = null),
+              ),
+              ..._allCouriers.map((c) => _ToggleChip(
+                    label: c[0].toUpperCase() + c.substring(1),
+                    selected: _courier == c,
+                    color: AppColors.primary,
+                    onTap: () =>
+                        setState(() => _courier = _courier == c ? null : c),
+                  )),
+            ],
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: ElevatedButton(
+              onPressed: () {
+                widget.onApply(_isActive, _courier);
+                Navigator.pop(context);
+              },
+              style: ElevatedButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
+              ),
+              child: Text(l10n.apply),
             ),
           ),
-        ),
-        body: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
-          children: [
-            Text(
-              l10n.adminBusinessStatusFilter.toUpperCase(),
-              style: theme.textTheme.labelSmall?.copyWith(
-                  fontWeight: FontWeight.bold, letterSpacing: 0.5),
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _ToggleChip(
-                  label: l10n.all,
-                  selected: _isActive == null,
-                  color: AppColors.primary,
-                  onTap: () => setState(() => _isActive = null),
-                ),
-                _ToggleChip(
-                  label: l10n.adminBusinessActive,
-                  selected: _isActive == 'true',
-                  color: AppColors.success,
-                  onTap: () => setState(() =>
-                      _isActive = _isActive == 'true' ? null : 'true'),
-                ),
-                _ToggleChip(
-                  label: l10n.adminBusinessInactive,
-                  selected: _isActive == 'false',
-                  color: AppColors.error,
-                  onTap: () => setState(() =>
-                      _isActive = _isActive == 'false' ? null : 'false'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            Text(
-              l10n.adminOrderCourier.toUpperCase(),
-              style: theme.textTheme.labelSmall?.copyWith(
-                  fontWeight: FontWeight.bold, letterSpacing: 0.5),
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _ToggleChip(
-                  label: l10n.adminCourierAll,
-                  selected: _courier == null,
-                  color: AppColors.primary,
-                  onTap: () => setState(() => _courier = null),
-                ),
-                ..._allCouriers.map((c) => _ToggleChip(
-                      label: c[0].toUpperCase() + c.substring(1),
-                      selected: _courier == c,
-                      color: AppColors.primary,
-                      onTap: () => setState(
-                          () => _courier = _courier == c ? null : c),
-                    )),
-              ],
-            ),
-          ],
-        ),
+          const SizedBox(height: 24),
+        ],
       ),
     );
   }

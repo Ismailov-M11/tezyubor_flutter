@@ -85,7 +85,7 @@ class _MetricsGrid extends StatelessWidget {
       _MetricItem(
         label: l10n.medicinesAmountLbl,
         value: _fmt(data.totalMedicines as double),
-        icon: Icons.medication,
+        icon: Icons.shopping_bag_outlined,
         color: AppColors.info,
       ),
       _MetricItem(

@@ -41,9 +41,14 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
 
   void _openFilter() {
     final current = ref.read(clientsProvider).filter;
-    pushRightPanel(
-      context,
-      _ClientFilterPage(
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _ClientFilterSheet(
         current: current,
         onApply: (f) => ref.read(clientsProvider.notifier).applyFilter(f),
         onClear: () => ref.read(clientsProvider.notifier).clearFilter(),
@@ -360,24 +365,24 @@ class _StatChip extends StatelessWidget {
       );
 }
 
-// ─── Client filter page ───────────────────────────────────────────────────────
+// ─── Client filter sheet ──────────────────────────────────────────────────────
 
-class _ClientFilterPage extends StatefulWidget {
+class _ClientFilterSheet extends StatefulWidget {
   final ClientsFilter current;
   final void Function(ClientsFilter) onApply;
   final VoidCallback onClear;
 
-  const _ClientFilterPage({
+  const _ClientFilterSheet({
     required this.current,
     required this.onApply,
     required this.onClear,
   });
 
   @override
-  State<_ClientFilterPage> createState() => _ClientFilterPageState();
+  State<_ClientFilterSheet> createState() => _ClientFilterSheetState();
 }
 
-class _ClientFilterPageState extends State<_ClientFilterPage> {
+class _ClientFilterSheetState extends State<_ClientFilterSheet> {
   DateTime? _dateFrom;
   DateTime? _dateTo;
 
@@ -403,91 +408,112 @@ class _ClientFilterPageState extends State<_ClientFilterPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final theme = Theme.of(context);
 
-    return SwipeToDismiss(
-      child: Scaffold(
-        appBar: AppBar(
-          leading: const PanelBackButton(),
-          title: Text(l10n.filter),
-          actions: [
-            TextButton(
-              onPressed: () {
-                widget.onClear();
-                Navigator.pop(context);
-              },
-              child: Text(
-                l10n.clear,
-                style: const TextStyle(
-                    color: AppColors.primary, fontWeight: FontWeight.w600),
-              ),
-            ),
-          ],
-        ),
-        bottomNavigationBar: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            child: SizedBox(
-              height: 52,
-              child: ElevatedButton(
-                onPressed: () {
-                  widget.onApply(ClientsFilter(
-                    search: widget.current.search,
-                    dateFrom: _dateFrom,
-                    dateTo: _dateTo,
-                  ));
-                  Navigator.pop(context);
-                },
-                style: ElevatedButton.styleFrom(
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16)),
-                ),
-                child: Text(l10n.apply),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 48,
+              height: 4,
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.outline.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(2),
               ),
             ),
           ),
-        ),
-        body: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
-          children: [
-            Text(l10n.dateRange,
-                style: Theme.of(context)
-                    .textTheme
-                    .labelMedium
-                    ?.copyWith(fontWeight: FontWeight.w600)),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    icon: const Icon(Icons.calendar_today, size: 16),
-                    label: Text(
-                        _dateFrom != null ? _fmt(_dateFrom!) : l10n.from,
-                        style: const TextStyle(fontSize: 13)),
-                    onPressed: () => _pickDate(true),
+          Row(
+            children: [
+              Text(l10n.filter,
+                  style: theme.textTheme.titleLarge
+                      ?.copyWith(fontWeight: FontWeight.w700)),
+              const Spacer(),
+              TextButton(
+                onPressed: () {
+                  widget.onClear();
+                  Navigator.pop(context);
+                },
+                child: Text(l10n.clear,
+                    style: const TextStyle(color: AppColors.primary)),
+              ),
+              GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.06),
+                    shape: BoxShape.circle,
                   ),
+                  child: Icon(Icons.close,
+                      size: 16,
+                      color: theme.colorScheme.onSurfaceVariant),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    icon: const Icon(Icons.calendar_today, size: 16),
-                    label: Text(_dateTo != null ? _fmt(_dateTo!) : l10n.to,
-                        style: const TextStyle(fontSize: 13)),
-                    onPressed: () => _pickDate(false),
-                  ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(l10n.dateRange,
+              style: theme.textTheme.labelMedium
+                  ?.copyWith(fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.calendar_today, size: 16),
+                  label: Text(
+                      _dateFrom != null ? _fmt(_dateFrom!) : l10n.from,
+                      style: const TextStyle(fontSize: 13)),
+                  onPressed: () => _pickDate(true),
                 ),
-                if (_dateFrom != null || _dateTo != null)
-                  IconButton(
-                    icon: const Icon(Icons.clear, size: 18),
-                    onPressed: () =>
-                        setState(() {
-                          _dateFrom = null;
-                          _dateTo = null;
-                        }),
-                  ),
-              ],
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.calendar_today, size: 16),
+                  label: Text(_dateTo != null ? _fmt(_dateTo!) : l10n.to,
+                      style: const TextStyle(fontSize: 13)),
+                  onPressed: () => _pickDate(false),
+                ),
+              ),
+              if (_dateFrom != null || _dateTo != null)
+                IconButton(
+                  icon: const Icon(Icons.clear, size: 18),
+                  onPressed: () => setState(() {
+                    _dateFrom = null;
+                    _dateTo = null;
+                  }),
+                ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: ElevatedButton(
+              onPressed: () {
+                widget.onApply(ClientsFilter(
+                  search: widget.current.search,
+                  dateFrom: _dateFrom,
+                  dateTo: _dateTo,
+                ));
+                Navigator.pop(context);
+              },
+              style: ElevatedButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
+              ),
+              child: Text(l10n.apply),
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 24),
+        ],
       ),
     );
   }

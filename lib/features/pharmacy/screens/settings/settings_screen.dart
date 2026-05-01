@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/l10n/app_l10n.dart';
 import '../../../../core/network/api_client.dart';
+import '../../../../shared/utils/right_panel.dart';
 import '../../../../shared/widgets/custom_button.dart';
 import '../../../../shared/widgets/custom_text_field.dart';
 import '../../../../shared/widgets/loading_overlay.dart';
@@ -139,36 +140,66 @@ class SettingsScreen extends ConsumerWidget {
         _ => 'Русский',
       };
 
-  void _showThemePicker(
-      BuildContext context, WidgetRef ref, AppL10n l10n) {
-    final current = ref.read(themeModeProvider);
-    showModalBottomSheet(
+  void _showThemePicker(BuildContext context, WidgetRef ref, AppL10n l10n) {
+    pushRightPanel(context, _ThemePickerPage(l10n: l10n));
+  }
+
+  void _showLanguagePicker(BuildContext context, WidgetRef ref, AppL10n l10n) {
+    pushRightPanel(context, _LanguagePickerPage(l10n: l10n));
+  }
+
+  void _showEditProfile(
+      BuildContext context, WidgetRef ref, dynamic profile, AppL10n l10n) {
+    pushRightPanel(context, _EditProfilePage(profile: profile, ref: ref, l10n: l10n));
+  }
+
+  void _showChangePassword(BuildContext context, WidgetRef ref, AppL10n l10n) {
+    pushRightPanel(context, _ChangePasswordPage(ref: ref, l10n: l10n));
+  }
+
+  Future<void> _logout(
+      BuildContext context, WidgetRef ref, AppL10n l10n) async {
+    final confirmed = await showDialog<bool>(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.logoutConfirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style:
+                TextButton.styleFrom(foregroundColor: AppColors.error),
+            child: Text(l10n.logout),
+          ),
+        ],
       ),
-      builder: (_) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+    );
+    if (confirmed == true) {
+      await ref.read(authStateProvider.notifier).logout();
+    }
+  }
+}
+
+// ─── Theme picker page ────────────────────────────────────────────────────────
+
+class _ThemePickerPage extends ConsumerWidget {
+  final AppL10n l10n;
+  const _ThemePickerPage({required this.l10n});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final current = ref.watch(themeModeProvider);
+    return SwipeToDismiss(
+      child: Scaffold(
+        appBar: AppBar(
+          leading: const PanelBackButton(),
+          title: Text(l10n.theme),
+        ),
+        body: Column(
           children: [
-            Center(
-              child: Container(
-                width: 40, height: 4,
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            Text(l10n.theme,
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
-                    ?.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
             _ThemeOption(
               icon: Icons.light_mode_outlined,
               label: l10n.themeLight,
@@ -201,121 +232,54 @@ class SettingsScreen extends ConsumerWidget {
       ),
     );
   }
+}
 
-  void _showLanguagePicker(
-      BuildContext context, WidgetRef ref, AppL10n l10n) {
-    final current = ref.read(localeProvider);
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (_) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40, height: 4,
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(2),
+// ─── Language picker page ─────────────────────────────────────────────────────
+
+class _LanguagePickerPage extends ConsumerWidget {
+  final AppL10n l10n;
+  const _LanguagePickerPage({required this.l10n});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final current = ref.watch(localeProvider);
+    return SwipeToDismiss(
+      child: Scaffold(
+        appBar: AppBar(
+          leading: const PanelBackButton(),
+          title: Text(l10n.language),
+        ),
+        body: RadioGroup<String>(
+          groupValue: current.languageCode,
+          onChanged: (v) {
+            if (v != null) {
+              ref.read(localeProvider.notifier).setLocale(Locale(v));
+              Navigator.pop(context);
+            }
+          },
+          child: Column(
+            children: [
+              for (final (code, name) in [
+                ('ru', 'Русский'),
+                ('uz', "O'zbekcha"),
+                ('en', 'English'),
+              ])
+                ListTile(
+                  title: Text(name),
+                  leading: Radio<String>(
+                    value: code,
+                    activeColor: AppColors.primary,
+                  ),
+                  onTap: () {
+                    ref.read(localeProvider.notifier).setLocale(Locale(code));
+                    Navigator.pop(context);
+                  },
                 ),
-              ),
-            ),
-            Text(l10n.language,
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
-                    ?.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            RadioGroup<String>(
-              groupValue: current.languageCode,
-              onChanged: (value) {
-                if (value != null) {
-                  ref.read(localeProvider.notifier).setLocale(Locale(value));
-                  Navigator.pop(context);
-                }
-              },
-              child: Column(
-                children: [
-                  for (final (code, name) in [
-                    ('ru', 'Русский'),
-                    ('uz', "O'zbekcha"),
-                    ('en', 'English'),
-                  ])
-                    ListTile(
-                      title: Text(name),
-                      leading: Radio<String>(
-                        value: code,
-                        activeColor: AppColors.primary,
-                      ),
-                      onTap: () {
-                        ref
-                            .read(localeProvider.notifier)
-                            .setLocale(Locale(code));
-                        Navigator.pop(context);
-                      },
-                    ),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
-  }
-
-  void _showEditProfile(
-      BuildContext context, WidgetRef ref, dynamic profile, AppL10n l10n) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (_) => _EditProfileSheet(profile: profile, ref: ref, l10n: l10n),
-    );
-  }
-
-  void _showChangePassword(
-      BuildContext context, WidgetRef ref, AppL10n l10n) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (_) => _ChangePasswordSheet(ref: ref, l10n: l10n),
-    );
-  }
-
-  Future<void> _logout(
-      BuildContext context, WidgetRef ref, AppL10n l10n) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.logoutConfirm),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(l10n.cancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style:
-                TextButton.styleFrom(foregroundColor: AppColors.error),
-            child: Text(l10n.logout),
-          ),
-        ],
-      ),
-    );
-    if (confirmed == true) {
-      await ref.read(authStateProvider.notifier).logout();
-    }
   }
 }
 
@@ -349,21 +313,21 @@ class _ThemeOption extends StatelessWidget {
       );
 }
 
-// ─── Edit profile sheet ───────────────────────────────────────────────────────
+// ─── Edit profile page ────────────────────────────────────────────────────────
 
-class _EditProfileSheet extends StatefulWidget {
+class _EditProfilePage extends StatefulWidget {
   final dynamic profile;
   final WidgetRef ref;
   final AppL10n l10n;
 
-  const _EditProfileSheet(
+  const _EditProfilePage(
       {required this.profile, required this.ref, required this.l10n});
 
   @override
-  State<_EditProfileSheet> createState() => _EditProfileSheetState();
+  State<_EditProfilePage> createState() => _EditProfilePageState();
 }
 
-class _EditProfileSheetState extends State<_EditProfileSheet> {
+class _EditProfilePageState extends State<_EditProfilePage> {
   late final TextEditingController _nameCtrl;
   late final TextEditingController _phoneCtrl;
   late final TextEditingController _emailCtrl;
@@ -419,58 +383,58 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
   @override
   Widget build(BuildContext context) {
     final l10n = widget.l10n;
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 20, right: 20, top: 12,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _SheetHeader(title: l10n.profileStore),
-          const SizedBox(height: 16),
-          if (_error != null) _ErrorBanner(message: _error!),
-          CustomTextField(
-            label: l10n.storeNameLbl,
-            controller: _nameCtrl,
-            textInputAction: TextInputAction.next,
-          ),
-          const SizedBox(height: 12),
-          CustomTextField(
-            label: l10n.phoneLbl,
-            controller: _phoneCtrl,
-            keyboardType: TextInputType.phone,
-            textInputAction: TextInputAction.next,
-          ),
-          const SizedBox(height: 12),
-          CustomTextField(
-            label: l10n.emailLbl,
-            controller: _emailCtrl,
-            keyboardType: TextInputType.emailAddress,
-            textInputAction: TextInputAction.done,
-          ),
-          const SizedBox(height: 20),
-          CustomButton(label: l10n.save, isLoading: _isLoading, onPressed: _save),
-        ],
+    return SwipeToDismiss(
+      child: Scaffold(
+        appBar: AppBar(
+          leading: const PanelBackButton(),
+          title: Text(l10n.profileStore),
+        ),
+        body: ListView(
+          padding: EdgeInsets.fromLTRB(
+              20, 16, 20, MediaQuery.of(context).viewInsets.bottom + 20),
+          children: [
+            if (_error != null) _ErrorBanner(message: _error!),
+            CustomTextField(
+              label: l10n.storeNameLbl,
+              controller: _nameCtrl,
+              textInputAction: TextInputAction.next,
+            ),
+            const SizedBox(height: 12),
+            CustomTextField(
+              label: l10n.phoneLbl,
+              controller: _phoneCtrl,
+              keyboardType: TextInputType.phone,
+              textInputAction: TextInputAction.next,
+            ),
+            const SizedBox(height: 12),
+            CustomTextField(
+              label: l10n.emailLbl,
+              controller: _emailCtrl,
+              keyboardType: TextInputType.emailAddress,
+              textInputAction: TextInputAction.done,
+            ),
+            const SizedBox(height: 20),
+            CustomButton(label: l10n.save, isLoading: _isLoading, onPressed: _save),
+          ],
+        ),
       ),
     );
   }
 }
 
-// ─── Change password sheet ────────────────────────────────────────────────────
+// ─── Change password page ─────────────────────────────────────────────────────
 
-class _ChangePasswordSheet extends StatefulWidget {
+class _ChangePasswordPage extends StatefulWidget {
   final WidgetRef ref;
   final AppL10n l10n;
 
-  const _ChangePasswordSheet({required this.ref, required this.l10n});
+  const _ChangePasswordPage({required this.ref, required this.l10n});
 
   @override
-  State<_ChangePasswordSheet> createState() => _ChangePasswordSheetState();
+  State<_ChangePasswordPage> createState() => _ChangePasswordPageState();
 }
 
-class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
+class _ChangePasswordPageState extends State<_ChangePasswordPage> {
   final _oldCtrl = TextEditingController();
   final _newCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();

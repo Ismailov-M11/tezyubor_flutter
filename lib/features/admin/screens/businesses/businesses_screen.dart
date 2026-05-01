@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/l10n/app_l10n.dart';
+import '../../../../shared/utils/right_panel.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/loading_overlay.dart';
 import '../../../pharmacy/screens/location/location_picker_screen.dart';
@@ -56,13 +57,9 @@ class _BusinessesScreenState extends ConsumerState<BusinessesScreen> {
   }
 
   void _openFilter() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => _BusinessFilterSheet(
+    pushRightPanel(
+      context,
+      _BusinessFilterPage(
         currentIsActive: _filterIsActive,
         currentCourier: _filterCourier,
         onApply: (isActive, courier) {
@@ -94,15 +91,7 @@ class _BusinessesScreenState extends ConsumerState<BusinessesScreen> {
   }
 
   void _openCreate() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => const _PharmacyFormSheet(),
-    );
+    pushRightPanel(context, const _PharmacyFormPage());
   }
 
   bool get _hasFilter => _filterIsActive != null || _filterCourier != null;
@@ -195,45 +184,36 @@ class _BusinessesScreenState extends ConsumerState<BusinessesScreen> {
                             const SizedBox(height: 10),
                         itemBuilder: (_, i) => _PharmacyCard(
                           pharmacy: state.pharmacies[i],
-                          onTap: () => _showDetail(
-                              context, state.pharmacies[i]),
+                          onTap: () => pushRightPanel(
+                            context,
+                            _PharmacyDetailPage(
+                                pharmacy: state.pharmacies[i]),
+                          ),
                         ),
                       ),
                     ),
       floatingActionButton: canCreate
-          ? FloatingActionButton.extended(
+          ? FloatingActionButton(
               onPressed: _openCreate,
               backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
-              icon: const Icon(Icons.add),
-              label: Text(l10n.adminCreateBusiness),
+              shape: const CircleBorder(),
+              child: const Icon(Icons.add, size: 26),
             )
           : null,
     );
   }
-
-  void _showDetail(BuildContext context, AdminPharmacy pharmacy) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => _PharmacyDetailSheet(pharmacy: pharmacy),
-    );
-  }
 }
 
-// ─── Filter sheet ─────────────────────────────────────────────────────────────
+// ─── Filter page ──────────────────────────────────────────────────────────────
 
-class _BusinessFilterSheet extends StatefulWidget {
+class _BusinessFilterPage extends StatefulWidget {
   final String? currentIsActive;
   final String? currentCourier;
   final void Function(String? isActive, String? courier) onApply;
   final VoidCallback onClear;
 
-  const _BusinessFilterSheet({
+  const _BusinessFilterPage({
     required this.currentIsActive,
     required this.currentCourier,
     required this.onApply,
@@ -241,10 +221,10 @@ class _BusinessFilterSheet extends StatefulWidget {
   });
 
   @override
-  State<_BusinessFilterSheet> createState() => _BusinessFilterSheetState();
+  State<_BusinessFilterPage> createState() => _BusinessFilterPageState();
 }
 
-class _BusinessFilterSheetState extends State<_BusinessFilterSheet> {
+class _BusinessFilterPageState extends State<_BusinessFilterPage> {
   String? _isActive;
   String? _courier;
 
@@ -263,133 +243,127 @@ class _BusinessFilterSheetState extends State<_BusinessFilterSheet> {
     final l10n = context.l10n;
     final theme = Theme.of(context);
 
-    return DraggableScrollableSheet(
-      expand: false,
-      initialChildSize: 0.55,
-      maxChildSize: 0.85,
-      builder: (_, scroll) => Column(
-        children: [
-          Container(
-            width: 40, height: 4,
-            margin: const EdgeInsets.symmetric(vertical: 10),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.outline.withValues(alpha: 0.4),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(
-              children: [
-                Text(l10n.filter,
-                    style: theme.textTheme.titleMedium
-                        ?.copyWith(fontWeight: FontWeight.bold)),
-                if (_count > 0) ...[
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 7, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text('$_count',
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold)),
+    return SwipeToDismiss(
+      child: Scaffold(
+        appBar: AppBar(
+          leading: const PanelBackButton(),
+          title: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(l10n.filter),
+              if (_count > 0) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                ],
-                const Spacer(),
-                TextButton(
-                  onPressed: () {
-                    widget.onClear();
-                    Navigator.pop(context);
-                  },
-                  child: Text(l10n.clear),
+                  child: Text(
+                    '$_count',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ],
-            ),
+            ],
           ),
-          const Divider(height: 1),
-          Expanded(
-            child: ListView(
-              controller: scroll,
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
-              children: [
-                Text(l10n.adminBusinessStatusFilter.toUpperCase(),
-                    style: theme.textTheme.labelSmall?.copyWith(
-                        fontWeight: FontWeight.bold, letterSpacing: 0.5)),
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    _ToggleChip(
-                      label: l10n.all,
-                      selected: _isActive == null,
-                      color: AppColors.primary,
-                      onTap: () => setState(() => _isActive = null),
-                    ),
-                    _ToggleChip(
-                      label: l10n.adminBusinessActive,
-                      selected: _isActive == 'true',
-                      color: AppColors.success,
-                      onTap: () => setState(() =>
-                          _isActive = _isActive == 'true' ? null : 'true'),
-                    ),
-                    _ToggleChip(
-                      label: l10n.adminBusinessInactive,
-                      selected: _isActive == 'false',
-                      color: AppColors.error,
-                      onTap: () => setState(() => _isActive =
-                          _isActive == 'false' ? null : 'false'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                Text(l10n.adminOrderCourier.toUpperCase(),
-                    style: theme.textTheme.labelSmall?.copyWith(
-                        fontWeight: FontWeight.bold, letterSpacing: 0.5)),
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    _ToggleChip(
-                      label: l10n.adminCourierAll,
-                      selected: _courier == null,
-                      color: AppColors.primary,
-                      onTap: () => setState(() => _courier = null),
-                    ),
-                    ..._allCouriers.map((c) => _ToggleChip(
-                          label: c[0].toUpperCase() + c.substring(1),
-                          selected: _courier == c,
-                          color: AppColors.primary,
-                          onTap: () => setState(
-                              () => _courier = _courier == c ? null : c),
-                        )),
-                  ],
-                ),
-              ],
+          actions: [
+            TextButton(
+              onPressed: () {
+                widget.onClear();
+                Navigator.pop(context);
+              },
+              child: Text(l10n.clear),
             ),
-          ),
-          Padding(
-            padding: EdgeInsets.fromLTRB(
-                16, 8, 16, MediaQuery.of(context).viewInsets.bottom + 16),
+          ],
+        ),
+        bottomNavigationBar: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
             child: SizedBox(
-              width: double.infinity,
-              height: 48,
+              height: 52,
               child: ElevatedButton(
                 onPressed: () {
                   widget.onApply(_isActive, _courier);
                   Navigator.pop(context);
                 },
+                style: ElevatedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
+                ),
                 child: Text(l10n.apply),
               ),
             ),
           ),
-        ],
+        ),
+        body: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+          children: [
+            Text(
+              l10n.adminBusinessStatusFilter.toUpperCase(),
+              style: theme.textTheme.labelSmall?.copyWith(
+                  fontWeight: FontWeight.bold, letterSpacing: 0.5),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _ToggleChip(
+                  label: l10n.all,
+                  selected: _isActive == null,
+                  color: AppColors.primary,
+                  onTap: () => setState(() => _isActive = null),
+                ),
+                _ToggleChip(
+                  label: l10n.adminBusinessActive,
+                  selected: _isActive == 'true',
+                  color: AppColors.success,
+                  onTap: () => setState(() =>
+                      _isActive = _isActive == 'true' ? null : 'true'),
+                ),
+                _ToggleChip(
+                  label: l10n.adminBusinessInactive,
+                  selected: _isActive == 'false',
+                  color: AppColors.error,
+                  onTap: () => setState(() =>
+                      _isActive = _isActive == 'false' ? null : 'false'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Text(
+              l10n.adminOrderCourier.toUpperCase(),
+              style: theme.textTheme.labelSmall?.copyWith(
+                  fontWeight: FontWeight.bold, letterSpacing: 0.5),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _ToggleChip(
+                  label: l10n.adminCourierAll,
+                  selected: _courier == null,
+                  color: AppColors.primary,
+                  onTap: () => setState(() => _courier = null),
+                ),
+                ..._allCouriers.map((c) => _ToggleChip(
+                      label: c[0].toUpperCase() + c.substring(1),
+                      selected: _courier == c,
+                      color: AppColors.primary,
+                      onTap: () => setState(
+                          () => _courier = _courier == c ? null : c),
+                    )),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -509,16 +483,19 @@ class _PharmacyCard extends ConsumerWidget {
   Widget _row(BuildContext ctx, IconData icon, String text) => Padding(
         padding: const EdgeInsets.only(bottom: 3),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon,
-                size: 14,
-                color: Theme.of(ctx).colorScheme.onSurfaceVariant),
+            Padding(
+              padding: const EdgeInsets.only(top: 1),
+              child: Icon(icon,
+                  size: 14,
+                  color: Theme.of(ctx).colorScheme.onSurfaceVariant),
+            ),
             const SizedBox(width: 6),
             Expanded(
               child: Text(
                 text,
                 style: Theme.of(ctx).textTheme.bodySmall,
-                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
@@ -531,14 +508,13 @@ class _PharmacyCard extends ConsumerWidget {
     if (dt == null) return null;
     return dt.difference(DateTime.now()).inDays;
   }
-
 }
 
-// ─── Pharmacy detail sheet ────────────────────────────────────────────────────
+// ─── Pharmacy detail page ─────────────────────────────────────────────────────
 
-class _PharmacyDetailSheet extends ConsumerWidget {
+class _PharmacyDetailPage extends ConsumerWidget {
   final AdminPharmacy pharmacy;
-  const _PharmacyDetailSheet({required this.pharmacy});
+  const _PharmacyDetailPage({required this.pharmacy});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -553,187 +529,159 @@ class _PharmacyDetailSheet extends ConsumerWidget {
     final isExpired = daysLeft != null && daysLeft <= 0;
     final isExpiringSoon = daysLeft != null && daysLeft <= 14;
 
-    return DraggableScrollableSheet(
-      expand: false,
-      initialChildSize: 0.75,
-      maxChildSize: 0.95,
-      builder: (_, scroll) => Column(
-        children: [
-          Container(
-            width: 40, height: 4,
-            margin: const EdgeInsets.symmetric(vertical: 10),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.outline.withValues(alpha: 0.4),
-              borderRadius: BorderRadius.circular(2),
-            ),
+    return SwipeToDismiss(
+      child: Scaffold(
+        appBar: AppBar(
+          leading: const PanelBackButton(),
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(pharmacy.name,
+                  style: theme.textTheme.titleSmall
+                      ?.copyWith(fontWeight: FontWeight.bold)),
+              Text(pharmacy.login,
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(fontFamily: 'monospace')),
+            ],
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(pharmacy.name,
-                          style: theme.textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.bold)),
-                      Text(pharmacy.login,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                              fontFamily: 'monospace')),
-                    ],
-                  ),
+          actions: [
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: pharmacy.isActive
+                      ? AppColors.success.withValues(alpha: 0.1)
+                      : AppColors.error.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
+                child: Text(
+                  pharmacy.isActive
+                      ? l10n.adminBusinessActive
+                      : l10n.adminBusinessInactive,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
                     color: pharmacy.isActive
-                        ? AppColors.success.withValues(alpha: 0.1)
-                        : AppColors.error.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
+                        ? AppColors.success
+                        : AppColors.error,
                   ),
-                  child: Text(
-                    pharmacy.isActive
-                        ? l10n.adminBusinessActive
-                        : l10n.adminBusinessInactive,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: pharmacy.isActive
-                          ? AppColors.success
-                          : AppColors.error,
+                ),
+              ),
+            ),
+          ],
+        ),
+        body: ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            _InfoRow(
+                icon: Icons.receipt_long_outlined,
+                label: l10n.adminBusinessOrders,
+                value: '${pharmacy.ordersCount}'),
+            if (pharmacy.ownerName != null)
+              _InfoRow(
+                  icon: Icons.person_outline,
+                  label: l10n.adminBusinessOwner,
+                  value: pharmacy.ownerName!),
+            if (pharmacy.phone != null)
+              _InfoRow(
+                  icon: Icons.phone_outlined,
+                  label: l10n.phone,
+                  value: pharmacy.phone!),
+            if (pharmacy.address != null)
+              _InfoRow(
+                  icon: Icons.location_on_outlined,
+                  label: l10n.address,
+                  value: pharmacy.address!),
+            if (pharmacy.allowedCouriers != null &&
+                pharmacy.allowedCouriers!.isNotEmpty)
+              _InfoRow(
+                  icon: Icons.local_shipping_outlined,
+                  label: l10n.adminBusinessCouriers,
+                  value: pharmacy.allowedCouriers!),
+            if (pharmacy.subscriptionExpiry != null)
+              _InfoRow(
+                icon: Icons.calendar_today,
+                label: l10n.adminBusinessSubExpiry,
+                value: _fmtDate(pharmacy.subscriptionExpiry!),
+                valueColor: isExpired
+                    ? AppColors.error
+                    : isExpiringSoon
+                        ? AppColors.warning
+                        : AppColors.success,
+              ),
+            if (canEdit || canDelete) ...[
+              const SizedBox(height: 20),
+              if (canEdit)
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      pushRightPanel(
+                        context,
+                        _PharmacyFormPage(pharmacy: pharmacy),
+                      );
+                    },
+                    icon: const Icon(Icons.edit_outlined),
+                    label: Text(l10n.adminEditBusiness),
+                  ),
+                ),
+              if (canDelete) ...[
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      final ok = await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: Text(l10n.adminDeleteBusiness),
+                          content: Text(
+                              '"${pharmacy.name}"\n${l10n.adminDeleteBusinessMsg}'),
+                          actions: [
+                            TextButton(
+                                onPressed: () =>
+                                    Navigator.pop(ctx, false),
+                                child: Text(l10n.cancel)),
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx, true),
+                              style: TextButton.styleFrom(
+                                  foregroundColor: AppColors.error),
+                              child: Text(l10n.yes),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (ok == true && context.mounted) {
+                        final success = await ref
+                            .read(adminPharmaciesProvider.notifier)
+                            .delete(pharmacy.id);
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context)
+                              .showSnackBar(SnackBar(
+                                  content: Text(success
+                                      ? l10n.adminBusinessDeleted
+                                      : l10n.error)));
+                        }
+                      }
+                    },
+                    icon: const Icon(Icons.delete_outline,
+                        color: AppColors.error),
+                    label: Text(
+                        l10n.adminDeleteBusiness.replaceAll('?', '')),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.error,
+                      side: const BorderSide(color: AppColors.error),
                     ),
                   ),
                 ),
               ],
-            ),
-          ),
-          const Divider(height: 1),
-          Expanded(
-            child: ListView(
-              controller: scroll,
-              padding: const EdgeInsets.all(20),
-              children: [
-                _InfoRow(
-                    icon: Icons.receipt_long_outlined,
-                    label: l10n.adminBusinessOrders,
-                    value: '${pharmacy.ordersCount}'),
-                if (pharmacy.ownerName != null)
-                  _InfoRow(
-                      icon: Icons.person_outline,
-                      label: l10n.adminBusinessOwner,
-                      value: pharmacy.ownerName!),
-                if (pharmacy.phone != null)
-                  _InfoRow(
-                      icon: Icons.phone_outlined,
-                      label: l10n.phone,
-                      value: pharmacy.phone!),
-                if (pharmacy.address != null)
-                  _InfoRow(
-                      icon: Icons.location_on_outlined,
-                      label: l10n.address,
-                      value: pharmacy.address!),
-                if (pharmacy.allowedCouriers != null &&
-                    pharmacy.allowedCouriers!.isNotEmpty)
-                  _InfoRow(
-                      icon: Icons.local_shipping_outlined,
-                      label: l10n.adminBusinessCouriers,
-                      value: pharmacy.allowedCouriers!),
-                if (pharmacy.subscriptionExpiry != null)
-                  _InfoRow(
-                    icon: Icons.calendar_today,
-                    label: l10n.adminBusinessSubExpiry,
-                    value: _fmtDate(pharmacy.subscriptionExpiry!),
-                    valueColor: isExpired
-                        ? AppColors.error
-                        : isExpiringSoon
-                            ? AppColors.warning
-                            : AppColors.success,
-                  ),
-                if (canEdit || canDelete) ...[
-                  const SizedBox(height: 20),
-                  if (canEdit)
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          showModalBottomSheet(
-                            context: context,
-                            isScrollControlled: true,
-                            useSafeArea: true,
-                            shape: const RoundedRectangleBorder(
-                              borderRadius: BorderRadius.vertical(
-                                  top: Radius.circular(20)),
-                            ),
-                            builder: (_) =>
-                                _PharmacyFormSheet(pharmacy: pharmacy),
-                          );
-                        },
-                        icon: const Icon(Icons.edit_outlined),
-                        label: Text(l10n.adminEditBusiness),
-                      ),
-                    ),
-                  if (canDelete) ...[
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: () async {
-                          final ok = await showDialog<bool>(
-                            context: context,
-                            builder: (ctx) => AlertDialog(
-                              title: Text(l10n.adminDeleteBusiness),
-                              content: Text(
-                                  '"${pharmacy.name}"\n${l10n.adminDeleteBusinessMsg}'),
-                              actions: [
-                                TextButton(
-                                    onPressed: () =>
-                                        Navigator.pop(ctx, false),
-                                    child: Text(l10n.cancel)),
-                                TextButton(
-                                  onPressed: () =>
-                                      Navigator.pop(ctx, true),
-                                  style: TextButton.styleFrom(
-                                      foregroundColor: AppColors.error),
-                                  child: Text(l10n.yes),
-                                ),
-                              ],
-                            ),
-                          );
-                          if (ok == true && context.mounted) {
-                            final success = await ref
-                                .read(adminPharmaciesProvider.notifier)
-                                .delete(pharmacy.id);
-                            if (context.mounted) {
-                              Navigator.pop(context);
-                              ScaffoldMessenger.of(context)
-                                  .showSnackBar(SnackBar(
-                                      content: Text(success
-                                          ? l10n.adminBusinessDeleted
-                                          : l10n.error)));
-                            }
-                          }
-                        },
-                        icon:
-                            const Icon(Icons.delete_outline,
-                                color: AppColors.error),
-                        label: Text(
-                            l10n.adminDeleteBusiness.replaceAll('?', '')),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.error,
-                          side:
-                              const BorderSide(color: AppColors.error),
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ],
-            ),
-          ),
-        ],
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -806,18 +754,17 @@ class _InfoRow extends StatelessWidget {
       );
 }
 
-// ─── Pharmacy form sheet ──────────────────────────────────────────────────────
+// ─── Pharmacy form page ───────────────────────────────────────────────────────
 
-class _PharmacyFormSheet extends ConsumerStatefulWidget {
+class _PharmacyFormPage extends ConsumerStatefulWidget {
   final AdminPharmacy? pharmacy;
-  const _PharmacyFormSheet({this.pharmacy});
+  const _PharmacyFormPage({this.pharmacy});
 
   @override
-  ConsumerState<_PharmacyFormSheet> createState() =>
-      _PharmacyFormSheetState();
+  ConsumerState<_PharmacyFormPage> createState() => _PharmacyFormPageState();
 }
 
-class _PharmacyFormSheetState extends ConsumerState<_PharmacyFormSheet> {
+class _PharmacyFormPageState extends ConsumerState<_PharmacyFormPage> {
   late final TextEditingController _nameCtrl;
   late final TextEditingController _ownerCtrl;
   late final TextEditingController _phoneCtrl;
@@ -868,7 +815,8 @@ class _PharmacyFormSheetState extends ConsumerState<_PharmacyFormSheet> {
   Future<void> _pickExpiry() async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: _expiryDate ?? DateTime.now().add(const Duration(days: 30)),
+      initialDate:
+          _expiryDate ?? DateTime.now().add(const Duration(days: 30)),
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
     );
@@ -937,225 +885,194 @@ class _PharmacyFormSheetState extends ConsumerState<_PharmacyFormSheet> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
 
-    return DraggableScrollableSheet(
-      expand: false,
-      initialChildSize: 0.9,
-      maxChildSize: 0.97,
-      builder: (_, scroll) => Padding(
-        padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom),
-        child: Column(
+    return SwipeToDismiss(
+      child: Scaffold(
+        appBar: AppBar(
+          leading: const PanelBackButton(),
+          title: Text(
+              _isEdit ? l10n.adminEditBusiness : l10n.adminCreateBusiness),
+        ),
+        body: ListView(
+          padding: EdgeInsets.fromLTRB(
+            20,
+            16,
+            20,
+            MediaQuery.of(context).viewInsets.bottom + 20,
+          ),
           children: [
-            const SizedBox(height: 8),
-            Container(
-              width: 36, height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
+            TextField(
+              controller: _nameCtrl,
+              decoration: InputDecoration(
+                labelText: l10n.storeNameLbl,
+                prefixIcon: const Icon(Icons.storefront_outlined),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 20, vertical: 12),
-              child: Row(
-                children: [
-                  Text(
-                    _isEdit
-                        ? l10n.adminEditBusiness
-                        : l10n.adminCreateBusiness,
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
+            const SizedBox(height: 12),
+            TextField(
+              controller: _ownerCtrl,
+              decoration: InputDecoration(
+                labelText: l10n.adminBusinessOwner,
+                prefixIcon: const Icon(Icons.person_outline),
               ),
             ),
-            const Divider(height: 1),
-            Expanded(
-              child: ListView(
-                controller: scroll,
-                padding: const EdgeInsets.all(20),
-                children: [
-                  TextField(
-                    controller: _nameCtrl,
-                    decoration: InputDecoration(
-                      labelText: l10n.storeNameLbl,
-                      prefixIcon:
-                          const Icon(Icons.storefront_outlined),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _ownerCtrl,
-                    decoration: InputDecoration(
-                      labelText: l10n.adminBusinessOwner,
-                      prefixIcon: const Icon(Icons.person_outline),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _phoneCtrl,
-                    keyboardType: TextInputType.phone,
-                    decoration: InputDecoration(
-                      labelText: l10n.adminBusinessPhoneLbl,
-                      prefixIcon: const Icon(Icons.phone_outlined),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _loginCtrl,
-                    decoration: InputDecoration(
-                      labelText: l10n.adminBusinessLoginLbl,
-                      prefixIcon: const Icon(Icons.alternate_email),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _passwordCtrl,
-                    obscureText: !_showPass,
-                    decoration: InputDecoration(
-                      labelText: _isEdit
-                          ? '${l10n.adminBusinessPasswordLbl} (${l10n.adminPasswordLeaveBlank})'
-                          : l10n.adminBusinessPasswordLbl,
-                      hintText: _isEdit ? '••••••' : l10n.adminPasswordMin,
-                      prefixIcon: const Icon(Icons.lock_outline),
-                      suffixIcon: IconButton(
-                        icon: Icon(_showPass
-                            ? Icons.visibility_off_outlined
-                            : Icons.visibility_outlined),
-                        onPressed: () =>
-                            setState(() => _showPass = !_showPass),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _phoneCtrl,
+              keyboardType: TextInputType.phone,
+              decoration: InputDecoration(
+                labelText: l10n.adminBusinessPhoneLbl,
+                prefixIcon: const Icon(Icons.phone_outlined),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _loginCtrl,
+              decoration: InputDecoration(
+                labelText: l10n.adminBusinessLoginLbl,
+                prefixIcon: const Icon(Icons.alternate_email),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _passwordCtrl,
+              obscureText: !_showPass,
+              decoration: InputDecoration(
+                labelText: _isEdit
+                    ? '${l10n.adminBusinessPasswordLbl} (${l10n.adminPasswordLeaveBlank})'
+                    : l10n.adminBusinessPasswordLbl,
+                hintText: _isEdit ? '••••••' : l10n.adminPasswordMin,
+                prefixIcon: const Icon(Icons.lock_outline),
+                suffixIcon: IconButton(
+                  icon: Icon(_showPass
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined),
+                  onPressed: () =>
+                      setState(() => _showPass = !_showPass),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _addressCtrl,
+              decoration: InputDecoration(
+                labelText: l10n.adminBusinessAddressLbl,
+                prefixIcon: const Icon(Icons.location_on_outlined),
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.map_outlined,
+                      color: AppColors.primary),
+                  onPressed: () => Navigator.push(
+                    context,
+                    PageRouteBuilder(
+                      pageBuilder: (_, __, ___) => LocationPickerScreen(
+                        initialAddress: _addressCtrl.text,
+                        onAddressPicked: (addr) =>
+                            setState(() => _addressCtrl.text = addr),
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _addressCtrl,
-                    decoration: InputDecoration(
-                      labelText: l10n.adminBusinessAddressLbl,
-                      prefixIcon: const Icon(Icons.location_on_outlined),
-                      suffixIcon: IconButton(
-                        icon: const Icon(Icons.map_outlined,
-                            color: AppColors.primary),
-                        onPressed: () => Navigator.push(
-                          context,
-                          PageRouteBuilder(
-                            pageBuilder: (_, __, ___) => LocationPickerScreen(
-                              initialAddress: _addressCtrl.text,
-                              onAddressPicked: (addr) =>
-                                  setState(() => _addressCtrl.text = addr),
-                            ),
-                            transitionsBuilder: (_, animation, __, child) =>
-                                SlideTransition(
-                                  position: Tween<Offset>(
-                                    begin: const Offset(1, 0),
-                                    end: Offset.zero,
-                                  ).animate(CurvedAnimation(
-                                      parent: animation,
-                                      curve: Curves.easeInOut)),
-                                  child: child,
-                                ),
+                      transitionsBuilder: (_, animation, __, child) =>
+                          SlideTransition(
+                            position: Tween<Offset>(
+                              begin: const Offset(1, 0),
+                              end: Offset.zero,
+                            ).animate(CurvedAnimation(
+                                parent: animation,
+                                curve: Curves.easeInOut)),
+                            child: child,
                           ),
-                        ),
-                      ),
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  // Subscription expiry
-                  GestureDetector(
-                    onTap: _pickExpiry,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 14),
-                      decoration: BoxDecoration(
-                        border: Border.all(
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            GestureDetector(
+              onTap: _pickExpiry,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 14),
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: _expiryDate == null
+                        ? Theme.of(context).colorScheme.outline
+                        : AppColors.primary,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.calendar_today,
+                        size: 20, color: AppColors.primary),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        _expiryDate != null
+                            ? '${l10n.adminBusinessSubExpiry}: ${_expiryDate!.day.toString().padLeft(2, '0')}.${_expiryDate!.month.toString().padLeft(2, '0')}.${_expiryDate!.year}'
+                            : l10n.adminBusinessSubExpiry,
+                        style: TextStyle(
                           color: _expiryDate == null
-                              ? Theme.of(context).colorScheme.outline
-                              : AppColors.primary,
+                              ? Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant
+                              : null,
                         ),
-                        borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.calendar_today,
-                              size: 20,
-                              color: AppColors.primary),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              _expiryDate != null
-                                  ? '${l10n.adminBusinessSubExpiry}: ${_expiryDate!.day.toString().padLeft(2, '0')}.${_expiryDate!.month.toString().padLeft(2, '0')}.${_expiryDate!.year}'
-                                  : l10n.adminBusinessSubExpiry,
-                              style: TextStyle(
-                                color: _expiryDate == null
-                                    ? Theme.of(context)
-                                        .colorScheme
-                                        .onSurfaceVariant
-                                    : null,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  // Allowed couriers
-                  Text(l10n.adminBusinessCouriers,
-                      style:
-                          Theme.of(context).textTheme.titleSmall),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: _allCouriers.map((c) {
-                      final sel = _couriers.contains(c);
-                      return FilterChip(
-                        label: Text(
-                          c[0].toUpperCase() + c.substring(1),
-                          style: TextStyle(
-                              color: sel ? Colors.white : null),
-                        ),
-                        selected: sel,
-                        onSelected: (v) => setState(
-                            () => v ? _couriers.add(c) : _couriers.remove(c)),
-                        selectedColor: AppColors.primary,
-                        checkmarkColor: Colors.white,
-                        showCheckmark: false,
-                      );
-                    }).toList(),
-                  ),
-                  if (_isEdit) ...[
-                    const SizedBox(height: 12),
-                    SwitchListTile(
-                      title: Text(l10n.adminActiveAccount),
-                      value: _isActive,
-                      onChanged: (v) =>
-                          setState(() => _isActive = v),
-                      activeTrackColor: AppColors.primary,
-                      contentPadding: EdgeInsets.zero,
                     ),
                   ],
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _submit,
-                      child: _isLoading
-                          ? const SizedBox(
-                              width: 20, height: 20,
-                              child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white),
-                            )
-                          : Text(_isEdit ? l10n.save : l10n.adminCreateBusiness),
-                    ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(l10n.adminBusinessCouriers,
+                style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _allCouriers.map((c) {
+                final sel = _couriers.contains(c);
+                return FilterChip(
+                  label: Text(
+                    c[0].toUpperCase() + c.substring(1),
+                    style:
+                        TextStyle(color: sel ? Colors.white : null),
                   ),
-                ],
+                  selected: sel,
+                  onSelected: (v) => setState(
+                      () => v ? _couriers.add(c) : _couriers.remove(c)),
+                  selectedColor: AppColors.primary,
+                  checkmarkColor: Colors.white,
+                  showCheckmark: false,
+                );
+              }).toList(),
+            ),
+            if (_isEdit) ...[
+              const SizedBox(height: 12),
+              SwitchListTile(
+                title: Text(l10n.adminActiveAccount),
+                value: _isActive,
+                onChanged: (v) => setState(() => _isActive = v),
+                activeTrackColor: AppColors.primary,
+                contentPadding: EdgeInsets.zero,
+              ),
+            ],
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton(
+                onPressed: _isLoading ? null : _submit,
+                style: ElevatedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
+                ),
+                child: _isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white),
+                      )
+                    : Text(
+                        _isEdit ? l10n.save : l10n.adminCreateBusiness),
               ),
             ),
           ],

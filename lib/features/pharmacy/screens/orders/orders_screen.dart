@@ -6,9 +6,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/l10n/app_l10n.dart';
+import '../../../../shared/utils/right_panel.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/loading_overlay.dart';
 import '../../../../shared/widgets/status_badge.dart';
+import '../../../../shared/widgets/status_tab_bar.dart';
 import '../../models/order_model.dart';
 import '../../providers/orders_provider.dart';
 import 'create_order_screen.dart';
@@ -75,7 +77,8 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
 
   static const _tabStatuses = ['all', ..._statusOrder];
 
-  String _tabLabel(String status, AppL10n l10n) {
+  String _tabLabel(String status) {
+    final l10n = context.l10n;
     if (status == 'all') return l10n.all;
     return StatusBadge.labelFor(status);
   }
@@ -98,12 +101,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
   }
 
   void _openCreate() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (_) => const CreateOrderSheet(),
-    );
+    pushRightPanel(context, const CreateOrderSheet());
   }
 
   void _onSearchChanged(String value) {
@@ -128,10 +126,9 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
 
   void _openFilter() {
     final current = ref.read(ordersProvider).filter;
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (ctx) => _OrderFilterSheet(
+    pushRightPanel(
+      context,
+      _OrderFilterPage(
         current: current,
         onApply: (f) => ref.read(ordersProvider.notifier).applyFilter(f),
         onClear: () => ref.read(ordersProvider.notifier).clearFilter(),
@@ -140,12 +137,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
   }
 
   void _showDetail(PharmacyOrder order) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (_) => _OrderDetailSheet(order: order),
-    );
+    pushRightPanel(context, _OrderDetailPage(order: order));
   }
 
   @override
@@ -210,21 +202,10 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
                     },
                   ),
                 ),
-              TabBar(
+              StatusTabBar(
+                statuses: _tabStatuses,
                 controller: _tabController,
-                isScrollable: true,
-                tabAlignment: TabAlignment.start,
-                labelPadding: const EdgeInsets.symmetric(horizontal: 14),
-                labelStyle: const TextStyle(
-                    fontSize: 12.5, fontWeight: FontWeight.w600),
-                unselectedLabelStyle: const TextStyle(
-                    fontSize: 12.5, fontWeight: FontWeight.w500),
-                indicatorWeight: 2,
-                indicatorColor: AppColors.primary,
-                dividerColor: Colors.transparent,
-                tabs: _tabStatuses
-                    .map((s) => Tab(text: _tabLabel(s, l10n)))
-                    .toList(),
+                getLabel: _tabLabel,
               ),
             ],
           ),
@@ -450,7 +431,6 @@ class _OrderCard extends ConsumerWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Status accent bar
               Container(
                 width: 3,
                 decoration: BoxDecoration(
@@ -460,14 +440,12 @@ class _OrderCard extends ConsumerWidget {
                   ),
                 ),
               ),
-              // Content
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.all(14),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Token row + status badge
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
@@ -484,8 +462,6 @@ class _OrderCard extends ConsumerWidget {
                           StatusBadge(status: order.status),
                         ],
                       ),
-
-                      // Customer name (prominent)
                       if (order.customerName != null) ...[
                         const SizedBox(height: 6),
                         Text(
@@ -501,8 +477,6 @@ class _OrderCard extends ConsumerWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ],
-
-                      // Comment preview
                       if (order.pharmacyComment != null &&
                           order.pharmacyComment!.isNotEmpty) ...[
                         const SizedBox(height: 7),
@@ -524,8 +498,6 @@ class _OrderCard extends ConsumerWidget {
                           ),
                         ),
                       ],
-
-                      // Phone
                       if (order.customerPhone != null) ...[
                         const SizedBox(height: 7),
                         _CardRow(
@@ -533,18 +505,13 @@ class _OrderCard extends ConsumerWidget {
                           value: order.customerPhone!,
                         ),
                       ],
-
-                      // Address
                       if (order.customerAddress != null) ...[
                         const SizedBox(height: 4),
                         _CardRow(
                           icon: Icons.location_on_outlined,
                           value: order.customerAddress!,
-                          truncate: true,
                         ),
                       ],
-
-                      // Courier
                       if (order.courierType != null) ...[
                         const SizedBox(height: 4),
                         _CardRow(
@@ -552,8 +519,6 @@ class _OrderCard extends ConsumerWidget {
                           value: order.courierType!,
                         ),
                       ],
-
-                      // Footer: date | amount
                       const SizedBox(height: 10),
                       Row(
                         children: [
@@ -562,7 +527,8 @@ class _OrderCard extends ConsumerWidget {
                           const SizedBox(width: 4),
                           Text(
                             _fmtDateShort(order.createdAt),
-                            style: TextStyle(fontSize: 11, color: mutedFg),
+                            style:
+                                TextStyle(fontSize: 11, color: mutedFg),
                           ),
                           const Spacer(),
                           if (total > 0)
@@ -570,8 +536,8 @@ class _OrderCard extends ConsumerWidget {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 9, vertical: 3),
                               decoration: BoxDecoration(
-                                color:
-                                    AppColors.primary.withValues(alpha: 0.12),
+                                color: AppColors.primary
+                                    .withValues(alpha: 0.12),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
@@ -585,8 +551,6 @@ class _OrderCard extends ConsumerWidget {
                             ),
                         ],
                       ),
-
-                      // Awaiting confirmation quick actions
                       if (order.status == 'awaiting_confirmation') ...[
                         const SizedBox(height: 10),
                         Row(
@@ -596,11 +560,12 @@ class _OrderCard extends ConsumerWidget {
                                 onPressed: () => _cancel(context, ref),
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: AppColors.error,
-                                  side:
-                                      const BorderSide(color: AppColors.error),
+                                  side: const BorderSide(
+                                      color: AppColors.error),
                                   minimumSize: const Size(0, 38),
                                   shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12)),
+                                      borderRadius:
+                                          BorderRadius.circular(12)),
                                 ),
                                 child: Text(l10n.cancel),
                               ),
@@ -614,7 +579,8 @@ class _OrderCard extends ConsumerWidget {
                                   foregroundColor: Colors.white,
                                   minimumSize: const Size(0, 38),
                                   shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12)),
+                                      borderRadius:
+                                          BorderRadius.circular(12)),
                                 ),
                                 child: Text(l10n.confirm),
                               ),
@@ -656,7 +622,8 @@ class _OrderCard extends ConsumerWidget {
               child: Text(l10n.no)),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            style:
+                TextButton.styleFrom(foregroundColor: AppColors.error),
             child: Text(l10n.yes),
           ),
         ],
@@ -671,9 +638,7 @@ class _OrderCard extends ConsumerWidget {
 class _CardRow extends StatelessWidget {
   final IconData icon;
   final String value;
-  final bool truncate;
-  const _CardRow(
-      {required this.icon, required this.value, this.truncate = false});
+  const _CardRow({required this.icon, required this.value});
 
   @override
   Widget build(BuildContext context) {
@@ -681,15 +646,17 @@ class _CardRow extends StatelessWidget {
         ? AppColors.mutedForegroundDark
         : AppColors.mutedForegroundLight;
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 13, color: mutedFg),
+        Padding(
+          padding: const EdgeInsets.only(top: 2),
+          child: Icon(icon, size: 13, color: mutedFg),
+        ),
         const SizedBox(width: 5),
         Expanded(
           child: Text(
             value,
             style: TextStyle(fontSize: 12.5, color: mutedFg),
-            maxLines: truncate ? 1 : null,
-            overflow: truncate ? TextOverflow.ellipsis : null,
           ),
         ),
       ],
@@ -697,11 +664,11 @@ class _CardRow extends StatelessWidget {
   }
 }
 
-// ─── Order detail sheet ───────────────────────────────────────────────────────
+// ─── Order detail page ────────────────────────────────────────────────────────
 
-class _OrderDetailSheet extends ConsumerWidget {
+class _OrderDetailPage extends ConsumerWidget {
   final PharmacyOrder order;
-  const _OrderDetailSheet({required this.order});
+  const _OrderDetailPage({required this.order});
 
   bool get _canShare =>
       order.status != 'cancelled' && order.status != 'delivered';
@@ -716,179 +683,139 @@ class _OrderDetailSheet extends ConsumerWidget {
     final total = order.totalPrice ??
         ((order.medicinesTotal ?? 0.0) + (order.deliveryPrice ?? 0.0));
 
-    return DraggableScrollableSheet(
-      initialChildSize: 0.75,
-      minChildSize: 0.5,
-      maxChildSize: 0.95,
-      expand: false,
-      builder: (_, scroll) => Column(
-        children: [
-          // Handle
-          Container(
-            width: 48,
-            height: 4,
-            margin: const EdgeInsets.symmetric(vertical: 14),
-            decoration: BoxDecoration(
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.15)
-                  : Colors.black.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-
-          // Header
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '#${order.token.toUpperCase()}',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.3,
-                          color: isDark
-                              ? AppColors.foregroundDark
-                              : AppColors.foregroundLight,
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        _fmtDate(order.createdAt),
-                        style: TextStyle(fontSize: 12, color: mutedFg),
-                      ),
-                    ],
-                  ),
+    return SwipeToDismiss(
+      child: Scaffold(
+        appBar: AppBar(
+          leading: const PanelBackButton(),
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '#${order.token.toUpperCase()}',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.3,
                 ),
-                StatusBadge(status: order.status),
-              ],
-            ),
+              ),
+              Text(
+                _fmtDate(order.createdAt),
+                style: TextStyle(fontSize: 11, color: mutedFg),
+              ),
+            ],
           ),
-
-          // Scrollable content
-          Expanded(
-            child: ListView(
-              controller: scroll,
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-              children: [
-                // Share link
-                if (_canShare && order.orderUrl != null) ...[
-                  _ShareLinkCard(url: order.orderUrl!, l10n: l10n),
-                  const SizedBox(height: 14),
-                ],
-
-                // Comment
-                if (order.pharmacyComment != null &&
-                    order.pharmacyComment!.isNotEmpty) ...[
-                  _SheetSection(
-                    title: l10n.orderCommentLbl,
-                    rows: [
-                      _SheetRow(
-                        icon: Icons.comment_outlined,
-                        label: l10n.orderCommentLbl,
-                        value: order.pharmacyComment!,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                ],
-
-                // Customer
-                if (order.customerName != null ||
-                    order.customerPhone != null ||
-                    order.customerAddress != null ||
-                    order.customerComment != null) ...[
-                  _SheetSection(
-                    title: l10n.customer,
-                    rows: [
-                      if (order.customerName != null)
-                        _SheetRow(
-                          icon: Icons.person_outline,
-                          label: l10n.customer,
-                          value: order.customerName!,
-                        ),
-                      if (order.customerPhone != null)
-                        _SheetPhoneRow(
-                            phone: order.customerPhone!, l10n: l10n),
-                      if (order.customerAddress != null)
-                        _SheetRow(
-                          icon: Icons.location_on_outlined,
-                          label: l10n.address,
-                          value: order.customerAddress!,
-                        ),
-                      if (order.customerComment != null &&
-                          order.customerComment!.isNotEmpty)
-                        _SheetRow(
-                          icon: Icons.chat_bubble_outline,
-                          label: l10n.customerCommentLbl,
-                          value: order.customerComment!,
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                ],
-
-                // Cost
-                if (order.medicinesTotal != null ||
-                    order.deliveryPrice != null) ...[
-                  _SheetSection(
-                    title: l10n.totalCost,
-                    rows: [
-                      if (order.medicinesTotal != null)
-                        _SheetRow(
-                          icon: Icons.shopping_bag_outlined,
-                          label: l10n.orderAmountLbl,
-                          value: _fmtAmount(order.medicinesTotal),
-                        ),
-                      if (order.deliveryPrice != null)
-                        _SheetRow(
-                          icon: Icons.delivery_dining,
-                          label: l10n.deliveryCost,
-                          value: _fmtAmount(order.deliveryPrice),
-                        ),
-                      if (total > 0)
-                        _SheetRow(
-                          icon: Icons.receipt_outlined,
-                          label: l10n.totalAmountLbl,
-                          value: _fmtAmount(total),
-                          bold: true,
-                          valueColor: AppColors.primary,
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                ],
-
-                // Courier
-                if (order.courierType != null) ...[
-                  _SheetSection(
-                    title: l10n.courier,
-                    rows: [
-                      _SheetRow(
-                        icon: Icons.local_shipping_outlined,
-                        label: l10n.courier,
-                        value: order.courierType!,
-                      ),
-                      if (order.trackingUrl != null)
-                        _TrackingRow(url: order.trackingUrl!, l10n: l10n),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                ],
-
-                // Actions
-                if (order.status == 'pending' ||
-                    order.status == 'awaiting_confirmation')
-                  _ActionButtons(order: order, ref: ref, l10n: l10n),
-              ],
+          actions: [
+            Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: StatusBadge(status: order.status),
             ),
-          ),
-        ],
+          ],
+        ),
+        body: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+          children: [
+            if (_canShare && order.orderUrl != null) ...[
+              _ShareLinkCard(url: order.orderUrl!, l10n: l10n),
+              const SizedBox(height: 14),
+            ],
+            if (order.pharmacyComment != null &&
+                order.pharmacyComment!.isNotEmpty) ...[
+              _SheetSection(
+                title: l10n.orderCommentLbl,
+                rows: [
+                  _SheetRow(
+                    icon: Icons.comment_outlined,
+                    label: l10n.orderCommentLbl,
+                    value: order.pharmacyComment!,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+            ],
+            if (order.customerName != null ||
+                order.customerPhone != null ||
+                order.customerAddress != null ||
+                order.customerComment != null) ...[
+              _SheetSection(
+                title: l10n.customer,
+                rows: [
+                  if (order.customerName != null)
+                    _SheetRow(
+                      icon: Icons.person_outline,
+                      label: l10n.customer,
+                      value: order.customerName!,
+                    ),
+                  if (order.customerPhone != null)
+                    _SheetPhoneRow(
+                        phone: order.customerPhone!, l10n: l10n),
+                  if (order.customerAddress != null)
+                    _SheetRow(
+                      icon: Icons.location_on_outlined,
+                      label: l10n.address,
+                      value: order.customerAddress!,
+                      wrapValue: true,
+                    ),
+                  if (order.customerComment != null &&
+                      order.customerComment!.isNotEmpty)
+                    _SheetRow(
+                      icon: Icons.chat_bubble_outline,
+                      label: l10n.customerCommentLbl,
+                      value: order.customerComment!,
+                    ),
+                ],
+              ),
+              const SizedBox(height: 14),
+            ],
+            if (order.medicinesTotal != null ||
+                order.deliveryPrice != null) ...[
+              _SheetSection(
+                title: l10n.totalCost,
+                rows: [
+                  if (order.medicinesTotal != null)
+                    _SheetRow(
+                      icon: Icons.shopping_bag_outlined,
+                      label: l10n.orderAmountLbl,
+                      value: _fmtAmount(order.medicinesTotal),
+                    ),
+                  if (order.deliveryPrice != null)
+                    _SheetRow(
+                      icon: Icons.delivery_dining,
+                      label: l10n.deliveryCost,
+                      value: _fmtAmount(order.deliveryPrice),
+                    ),
+                  if (total > 0)
+                    _SheetRow(
+                      icon: Icons.receipt_outlined,
+                      label: l10n.totalAmountLbl,
+                      value: _fmtAmount(total),
+                      bold: true,
+                      valueColor: AppColors.primary,
+                    ),
+                ],
+              ),
+              const SizedBox(height: 14),
+            ],
+            if (order.courierType != null) ...[
+              _SheetSection(
+                title: l10n.courier,
+                rows: [
+                  _SheetRow(
+                    icon: Icons.local_shipping_outlined,
+                    label: l10n.courier,
+                    value: order.courierType!,
+                  ),
+                  if (order.trackingUrl != null)
+                    _TrackingRow(url: order.trackingUrl!, l10n: l10n),
+                ],
+              ),
+              const SizedBox(height: 14),
+            ],
+            if (order.status == 'pending' ||
+                order.status == 'awaiting_confirmation')
+              _ActionButtons(order: order, ref: ref, l10n: l10n),
+          ],
+        ),
       ),
     );
   }
@@ -965,6 +892,7 @@ class _SheetRow extends StatelessWidget {
   final String value;
   final bool bold;
   final Color? valueColor;
+  final bool wrapValue;
 
   const _SheetRow({
     required this.icon,
@@ -972,6 +900,7 @@ class _SheetRow extends StatelessWidget {
     required this.value,
     this.bold = false,
     this.valueColor,
+    this.wrapValue = false,
   });
 
   @override
@@ -982,6 +911,36 @@ class _SheetRow extends StatelessWidget {
         : AppColors.mutedForegroundLight;
     final fg =
         isDark ? AppColors.foregroundDark : AppColors.foregroundLight;
+
+    if (wrapValue) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 16, color: AppColors.primary),
+                const SizedBox(width: 12),
+                Text(label, style: TextStyle(fontSize: 13, color: mutedFg)),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Padding(
+              padding: const EdgeInsets.only(left: 28),
+              child: Text(
+                value,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
+                  color: valueColor ?? fg,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
@@ -1274,7 +1233,8 @@ class _ActionButtons extends StatelessWidget {
               child: Text(l10n.no)),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            style:
+                TextButton.styleFrom(foregroundColor: AppColors.error),
             child: Text(l10n.yes),
           ),
         ],
@@ -1287,24 +1247,24 @@ class _ActionButtons extends StatelessWidget {
   }
 }
 
-// ─── Filter sheet ─────────────────────────────────────────────────────────────
+// ─── Filter page ──────────────────────────────────────────────────────────────
 
-class _OrderFilterSheet extends StatefulWidget {
+class _OrderFilterPage extends StatefulWidget {
   final OrdersFilter current;
   final void Function(OrdersFilter) onApply;
   final VoidCallback onClear;
 
-  const _OrderFilterSheet({
+  const _OrderFilterPage({
     required this.current,
     required this.onApply,
     required this.onClear,
   });
 
   @override
-  State<_OrderFilterSheet> createState() => _OrderFilterSheetState();
+  State<_OrderFilterPage> createState() => _OrderFilterPageState();
 }
 
-class _OrderFilterSheetState extends State<_OrderFilterSheet> {
+class _OrderFilterPageState extends State<_OrderFilterPage> {
   late List<String> _couriers;
   DateTime? _dateFrom;
   DateTime? _dateTo;
@@ -1331,7 +1291,7 @@ class _OrderFilterSheetState extends State<_OrderFilterSheet> {
     }
   }
 
-  int get _activeFilterCount =>
+  int get _count =>
       _couriers.length +
       (_dateFrom != null ? 1 : 0) +
       (_dateTo != null ? 1 : 0);
@@ -1344,168 +1304,144 @@ class _OrderFilterSheetState extends State<_OrderFilterSheet> {
         ? AppColors.mutedForegroundDark
         : AppColors.mutedForegroundLight;
 
-    return DraggableScrollableSheet(
-      initialChildSize: 0.6,
-      minChildSize: 0.4,
-      maxChildSize: 0.9,
-      expand: false,
-      builder: (_, scroll) => Column(
-        children: [
-          Container(
-            width: 48,
-            height: 4,
-            margin: const EdgeInsets.symmetric(vertical: 14),
-            decoration: BoxDecoration(
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.15)
-                  : Colors.black.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(
-              children: [
-                Text(l10n.filter,
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium
-                        ?.copyWith(fontWeight: FontWeight.bold)),
-                if (_activeFilterCount > 0) ...[
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      borderRadius: BorderRadius.circular(100),
-                    ),
-                    child: Text('$_activeFilterCount',
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold)),
+    return SwipeToDismiss(
+      child: Scaffold(
+        appBar: AppBar(
+          leading: const PanelBackButton(),
+          title: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(l10n.filter),
+              if (_count > 0) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(100),
                   ),
-                ],
-                const Spacer(),
-                TextButton(
-                  onPressed: () {
-                    widget.onClear();
-                    Navigator.pop(context);
-                  },
-                  child: Text(l10n.clear),
+                  child: Text('$_count',
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold)),
                 ),
               ],
-            ),
+            ],
           ),
-          const SizedBox(height: 4),
-          Expanded(
-            child: ListView(
-              controller: scroll,
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
-              children: [
-                // Courier section
-                Padding(
-                  padding: const EdgeInsets.only(left: 4, bottom: 8),
-                  child: Text(
-                    l10n.courier.toUpperCase(),
-                    style: TextStyle(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.8,
-                      color: mutedFg,
-                    ),
-                  ),
-                ),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: _allCouriers.map((c) {
-                    final sel = _couriers.contains(c);
-                    return _ToggleChip(
-                      label: c[0].toUpperCase() + c.substring(1),
-                      selected: sel,
-                      color: AppColors.primary,
-                      onTap: () => setState(() =>
-                          sel ? _couriers.remove(c) : _couriers.add(c)),
-                    );
-                  }).toList(),
-                ),
-
-                const SizedBox(height: 20),
-
-                // Date section
-                Padding(
-                  padding: const EdgeInsets.only(left: 4, bottom: 8),
-                  child: Text(
-                    l10n.dateRange.toUpperCase(),
-                    style: TextStyle(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.8,
-                      color: mutedFg,
-                    ),
-                  ),
-                ),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        icon: const Icon(Icons.calendar_today, size: 15),
-                        label: Text(
-                          _dateFrom != null ? _fmt(_dateFrom!) : l10n.from,
-                          style: const TextStyle(fontSize: 13),
-                        ),
-                        onPressed: () => _pickDate(true),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        icon: const Icon(Icons.calendar_today, size: 15),
-                        label: Text(
-                          _dateTo != null ? _fmt(_dateTo!) : l10n.to,
-                          style: const TextStyle(fontSize: 13),
-                        ),
-                        onPressed: () => _pickDate(false),
-                      ),
-                    ),
-                    if (_dateFrom != null || _dateTo != null)
-                      IconButton(
-                        icon: const Icon(Icons.clear, size: 16),
-                        onPressed: () => setState(
-                            () {
-                              _dateFrom = null;
-                              _dateTo = null;
-                            }),
-                      ),
-                  ],
-                ),
-              ],
+          actions: [
+            TextButton(
+              onPressed: () {
+                widget.onClear();
+                Navigator.pop(context);
+              },
+              child: Text(l10n.clear),
             ),
-          ),
-          Padding(
-            padding: EdgeInsets.fromLTRB(
-                16, 8, 16, MediaQuery.of(context).viewInsets.bottom + 16),
-            child: SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton(
-                onPressed: () {
-                  widget.onApply(OrdersFilter(
-                    search: widget.current.search,
-                    statuses: widget.current.statuses,
-                    couriers: _couriers,
-                    dateFrom: _dateFrom,
-                    dateTo: _dateTo,
-                  ));
-                  Navigator.pop(context);
-                },
-                child: Text(l10n.apply),
+          ],
+        ),
+        body: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(left: 4, bottom: 8),
+              child: Text(
+                l10n.courier.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.8,
+                  color: mutedFg,
+                ),
               ),
             ),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _allCouriers.map((c) {
+                final sel = _couriers.contains(c);
+                return _ToggleChip(
+                  label: c[0].toUpperCase() + c.substring(1),
+                  selected: sel,
+                  color: AppColors.primary,
+                  onTap: () => setState(() =>
+                      sel ? _couriers.remove(c) : _couriers.add(c)),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 20),
+            Padding(
+              padding: const EdgeInsets.only(left: 4, bottom: 8),
+              child: Text(
+                l10n.dateRange.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.8,
+                  color: mutedFg,
+                ),
+              ),
+            ),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.calendar_today, size: 15),
+                    label: Text(
+                      _dateFrom != null ? _fmt(_dateFrom!) : l10n.from,
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                    onPressed: () => _pickDate(true),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.calendar_today, size: 15),
+                    label: Text(
+                      _dateTo != null ? _fmt(_dateTo!) : l10n.to,
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                    onPressed: () => _pickDate(false),
+                  ),
+                ),
+                if (_dateFrom != null || _dateTo != null)
+                  IconButton(
+                    icon: const Icon(Icons.clear, size: 16),
+                    onPressed: () => setState(() {
+                      _dateFrom = null;
+                      _dateTo = null;
+                    }),
+                  ),
+              ],
+            ),
+          ],
+        ),
+        bottomNavigationBar: Padding(
+          padding: EdgeInsets.fromLTRB(
+              16, 8, 16, MediaQuery.of(context).padding.bottom + 16),
+          child: SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: ElevatedButton(
+              onPressed: () {
+                widget.onApply(OrdersFilter(
+                  search: widget.current.search,
+                  statuses: widget.current.statuses,
+                  couriers: _couriers,
+                  dateFrom: _dateFrom,
+                  dateTo: _dateTo,
+                ));
+                Navigator.pop(context);
+              },
+              style: ElevatedButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
+              ),
+              child: Text(l10n.apply),
+            ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -1532,12 +1468,15 @@ class _ToggleChip extends StatelessWidget {
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          padding:
+              const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
             color: selected ? color : color.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(100),
             border: Border.all(
-                color: selected ? color : color.withValues(alpha: 0.25)),
+                color: selected
+                    ? color
+                    : color.withValues(alpha: 0.25)),
           ),
           child: Text(
             label,

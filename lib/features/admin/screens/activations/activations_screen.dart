@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/l10n/app_l10n.dart';
+import '../../../../shared/utils/right_panel.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/loading_overlay.dart';
 import '../../models/admin_models.dart';
@@ -68,10 +69,9 @@ class _ActivationsScreenState extends ConsumerState<ActivationsScreen> {
 
   void _openFilterSheet() {
     final current = ref.read(adminActivationsProvider).filter;
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => _ActivationFilterSheet(
+    pushRightPanel(
+      context,
+      _ActivationFilterPage(
         initial: current,
         onApply: (f) => ref
             .read(adminActivationsProvider.notifier)
@@ -85,10 +85,9 @@ class _ActivationsScreenState extends ConsumerState<ActivationsScreen> {
 
   void _showDetail(AdminActivation activation) {
     final me = ref.read(adminMeProvider);
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => _ActivationDetailSheet(
+    pushRightPanel(
+      context,
+      _ActivationDetailPage(
         activation: activation,
         canReassign: me.isSuperAdmin,
         onReassign: () => _openReassignSheet(activation),
@@ -97,10 +96,9 @@ class _ActivationsScreenState extends ConsumerState<ActivationsScreen> {
   }
 
   void _openReassignSheet(AdminActivation activation) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => _ReassignSheet(
+    pushRightPanel(
+      context,
+      _ReassignPage(
         activation: activation,
         onDone: (createdById, selfRegistered) async {
           final ok = await ref
@@ -505,14 +503,14 @@ class _CreatorBadge extends StatelessWidget {
   }
 }
 
-// ─── Detail Sheet ─────────────────────────────────────────────────────────────
+// ─── Detail Page ──────────────────────────────────────────────────────────────
 
-class _ActivationDetailSheet extends StatelessWidget {
+class _ActivationDetailPage extends StatelessWidget {
   final AdminActivation activation;
   final bool canReassign;
   final VoidCallback onReassign;
 
-  const _ActivationDetailSheet({
+  const _ActivationDetailPage({
     required this.activation,
     required this.canReassign,
     required this.onReassign,
@@ -533,121 +531,80 @@ class _ActivationDetailSheet extends StatelessWidget {
     final theme = Theme.of(context);
     final a = activation;
 
-    return DraggableScrollableSheet(
-      initialChildSize: 0.55,
-      minChildSize: 0.35,
-      maxChildSize: 0.9,
-      expand: false,
-      builder: (_, ctrl) => Column(
-        children: [
-          const SizedBox(height: 8),
-          Container(
-            width: 36,
-            height: 4,
-            decoration: BoxDecoration(
-              color: theme.colorScheme.outline.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(2),
-            ),
+    return SwipeToDismiss(
+      child: Scaffold(
+        appBar: AppBar(
+          leading: const PanelBackButton(),
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(a.pharmacyName,
+                  style: theme.textTheme.titleSmall
+                      ?.copyWith(fontWeight: FontWeight.w700)),
+              if (a.login.isNotEmpty)
+                Text(a.login,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
+                      fontFamily: 'monospace',
+                    )),
+            ],
           ),
-          Expanded(
-            child: ListView(
-              controller: ctrl,
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-                children: [
-                  // Header
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              a.pharmacyName,
-                              style: theme.textTheme.titleMedium
-                                  ?.copyWith(fontWeight: FontWeight.w700),
-                            ),
-                            if (a.login.isNotEmpty)
-                              Text(
-                                a.login,
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: theme.colorScheme.onSurface
-                                      .withValues(alpha: 0.55),
-                                  fontFamily: 'monospace',
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                      _StatusBadge(isActive: a.isActive),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  const Divider(height: 1),
-                  const SizedBox(height: 16),
-
-                  // Details
-                  if (a.phone != null)
-                    _DetailRow(
-                      icon: Icons.phone_outlined,
-                      label: 'Телефон',
-                      value: a.phone!,
-                    ),
-                  _DetailRow(
-                    icon: Icons.calendar_today_outlined,
-                    label: l10n.adminActivationDateAdded,
-                    value: _fmt(a.createdAt),
-                  ),
-                  if (a.subscriptionExpiry != null)
-                    _DetailRow(
-                      icon: Icons.event_outlined,
-                      label: 'Подписка до',
-                      value: _fmt(a.subscriptionExpiry!),
-                    ),
-
-                  const SizedBox(height: 16),
-                  const Divider(height: 1),
-                  const SizedBox(height: 16),
-
-                  // Creator info
-                  Row(
-                    children: [
-                      Icon(Icons.person_add_outlined,
-                          size: 16,
-                          color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
-                      const SizedBox(width: 8),
-                      Text(
-                        l10n.adminActivationCreator,
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          color:
-                              theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                        ),
-                      ),
-                      const Spacer(),
-                      _CreatorBadge(activation: a, l10n: l10n),
-                    ],
-                  ),
-
-                  if (canReassign) ...[
-                    const SizedBox(height: 24),
-                    OutlinedButton.icon(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        onReassign();
-                      },
-                      icon: const Icon(Icons.swap_horiz_outlined, size: 18),
-                      label: Text(l10n.adminActivationReassign),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.primary,
-                        side: const BorderSide(color: AppColors.primary),
-                        minimumSize: const Size(double.infinity, 44),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
+          actions: [
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: _StatusBadge(isActive: a.isActive),
             ),
           ],
         ),
+        body: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+          children: [
+            if (a.phone != null)
+              _DetailRow(icon: Icons.phone_outlined, label: 'Телефон', value: a.phone!),
+            _DetailRow(
+                icon: Icons.calendar_today_outlined,
+                label: l10n.adminActivationDateAdded,
+                value: _fmt(a.createdAt)),
+            if (a.subscriptionExpiry != null)
+              _DetailRow(
+                  icon: Icons.event_outlined,
+                  label: 'Подписка до',
+                  value: _fmt(a.subscriptionExpiry!)),
+            const SizedBox(height: 16),
+            const Divider(height: 1),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Icon(Icons.person_add_outlined,
+                    size: 16,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
+                const SizedBox(width: 8),
+                Text(l10n.adminActivationCreator,
+                    style: theme.textTheme.labelMedium?.copyWith(
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
+                const Spacer(),
+                _CreatorBadge(activation: a, l10n: l10n),
+              ],
+            ),
+            if (canReassign) ...[
+              const SizedBox(height: 24),
+              OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.pop(context);
+                  onReassign();
+                },
+                icon: const Icon(Icons.swap_horiz_outlined, size: 18),
+                label: Text(l10n.adminActivationReassign),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  side: const BorderSide(color: AppColors.primary),
+                  minimumSize: const Size(double.infinity, 44),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }
@@ -692,19 +649,19 @@ class _DetailRow extends StatelessWidget {
   }
 }
 
-// ─── Reassign Sheet ───────────────────────────────────────────────────────────
+// ─── Reassign Page ────────────────────────────────────────────────────────────
 
-class _ReassignSheet extends ConsumerStatefulWidget {
+class _ReassignPage extends ConsumerStatefulWidget {
   final AdminActivation activation;
   final Future<void> Function(String? createdById, bool selfRegistered) onDone;
 
-  const _ReassignSheet({required this.activation, required this.onDone});
+  const _ReassignPage({required this.activation, required this.onDone});
 
   @override
-  ConsumerState<_ReassignSheet> createState() => _ReassignSheetState();
+  ConsumerState<_ReassignPage> createState() => _ReassignPageState();
 }
 
-class _ReassignSheetState extends ConsumerState<_ReassignSheet> {
+class _ReassignPageState extends ConsumerState<_ReassignPage> {
   bool _isLoading = false;
 
   Future<void> _reassign(String? userId, bool selfRegistered) async {
@@ -719,83 +676,63 @@ class _ReassignSheetState extends ConsumerState<_ReassignSheet> {
     final theme = Theme.of(context);
     final usersState = ref.watch(adminUsersProvider);
 
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        20, 12, 20, 24 + MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.outline.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              l10n.adminActivationReassign,
-              style: theme.textTheme.titleMedium
-                  ?.copyWith(fontWeight: FontWeight.w700),
-            ),
-            Text(
-              widget.activation.pharmacyName,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-              ),
-            ),
-            const SizedBox(height: 16),
-            if (_isLoading)
-              const Center(child: CircularProgressIndicator())
-            else ...[
-              // Self-registered option
-              _ReassignOption(
-                icon: Icons.person_outline,
-                label: l10n.adminActivationSelfRegistered,
-                color: Colors.teal,
-                onTap: () => _reassign(null, true),
-              ),
-              const SizedBox(height: 8),
-              // Superadmin option
-              _ReassignOption(
-                icon: Icons.admin_panel_settings_outlined,
-                label: l10n.adminActivationSuperAdmin,
-                color: Colors.deepPurple,
-                onTap: () => _reassign(null, false),
-              ),
-              if (usersState.users.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                Divider(
-                    color: theme.colorScheme.outline.withValues(alpha: 0.3)),
-                const SizedBox(height: 8),
-                Text(
-                  l10n.adminActivationByUser,
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                ...usersState.users
-                    .where((u) => u.isActive)
-                    .map((u) => Padding(
-                          padding: const EdgeInsets.only(bottom: 6),
-                          child: _ReassignOption(
-                            icon: Icons.manage_accounts_outlined,
-                            label: u.name,
-                            sublabel: u.email,
-                            color: Colors.indigo,
-                            onTap: () => _reassign(u.id, false),
-                          ),
-                        )),
-              ],
+    return SwipeToDismiss(
+      child: Scaffold(
+        appBar: AppBar(
+          leading: const PanelBackButton(),
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(l10n.adminActivationReassign),
+              Text(widget.activation.pharmacyName,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
             ],
-          ],
+          ),
         ),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : ListView(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                children: [
+                  _ReassignOption(
+                    icon: Icons.person_outline,
+                    label: l10n.adminActivationSelfRegistered,
+                    color: Colors.teal,
+                    onTap: () => _reassign(null, true),
+                  ),
+                  const SizedBox(height: 8),
+                  _ReassignOption(
+                    icon: Icons.admin_panel_settings_outlined,
+                    label: l10n.adminActivationSuperAdmin,
+                    color: Colors.deepPurple,
+                    onTap: () => _reassign(null, false),
+                  ),
+                  if (usersState.users.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Divider(color: theme.colorScheme.outline.withValues(alpha: 0.3)),
+                    const SizedBox(height: 8),
+                    Text(l10n.adminActivationByUser,
+                        style: theme.textTheme.labelMedium?.copyWith(
+                            color: theme.colorScheme.onSurface
+                                .withValues(alpha: 0.55))),
+                    const SizedBox(height: 8),
+                    ...usersState.users
+                        .where((u) => u.isActive)
+                        .map((u) => Padding(
+                              padding: const EdgeInsets.only(bottom: 6),
+                              child: _ReassignOption(
+                                icon: Icons.manage_accounts_outlined,
+                                label: u.name,
+                                sublabel: u.email,
+                                color: Colors.indigo,
+                                onTap: () => _reassign(u.id, false),
+                              ),
+                            )),
+                  ],
+                ],
+              ),
+      ),
     );
   }
 }
@@ -865,24 +802,24 @@ class _ReassignOption extends StatelessWidget {
   }
 }
 
-// ─── Filter Sheet ─────────────────────────────────────────────────────────────
+// ─── Filter Page ──────────────────────────────────────────────────────────────
 
-class _ActivationFilterSheet extends StatefulWidget {
+class _ActivationFilterPage extends StatefulWidget {
   final AdminActivationsFilter initial;
   final ValueChanged<AdminActivationsFilter> onApply;
   final VoidCallback onClear;
 
-  const _ActivationFilterSheet({
+  const _ActivationFilterPage({
     required this.initial,
     required this.onApply,
     required this.onClear,
   });
 
   @override
-  State<_ActivationFilterSheet> createState() => _ActivationFilterSheetState();
+  State<_ActivationFilterPage> createState() => _ActivationFilterPageState();
 }
 
-class _ActivationFilterSheetState extends State<_ActivationFilterSheet> {
+class _ActivationFilterPageState extends State<_ActivationFilterPage> {
   late String? _creatorType;
   late String? _status;
   late DateTime? _dateFrom;
@@ -927,154 +864,127 @@ class _ActivationFilterSheetState extends State<_ActivationFilterSheet> {
     final l10n = context.l10n;
     final theme = Theme.of(context);
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: theme.colorScheme.outline.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(2),
+    return SwipeToDismiss(
+      child: Scaffold(
+        appBar: AppBar(
+          leading: const PanelBackButton(),
+          title: Text(l10n.filter),
+          actions: [
+            if (_activeCount > 0)
+              TextButton(
+                onPressed: () {
+                  widget.onClear();
+                  Navigator.pop(context);
+                },
+                child: Text(l10n.clear,
+                    style: const TextStyle(color: AppColors.primary)),
+              ),
+          ],
+        ),
+        bottomNavigationBar: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            child: SizedBox(
+              height: 52,
+              child: FilledButton(
+                onPressed: () {
+                  widget.onApply(AdminActivationsFilter(
+                    creatorType: _creatorType,
+                    status: _status,
+                    dateFrom: _dateFrom,
+                    dateTo: _dateTo,
+                  ));
+                  Navigator.pop(context);
+                },
+                child: Text(l10n.apply),
               ),
             ),
           ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Text(
-                l10n.filter,
-                style: theme.textTheme.titleMedium
-                    ?.copyWith(fontWeight: FontWeight.w700),
-              ),
-              const Spacer(),
-              if (_activeCount > 0)
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    widget.onClear();
-                  },
-                  child: Text(l10n.clear,
-                      style: const TextStyle(color: AppColors.primary)),
+        ),
+        body: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+          children: [
+            Text(l10n.adminActivationWhoAdded,
+                style: theme.textTheme.labelMedium?.copyWith(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: [
+                _ToggleChip(
+                  label: l10n.adminActivationSelfRegistered,
+                  isSelected: _creatorType == 'self',
+                  onTap: () => setState(() =>
+                      _creatorType = _creatorType == 'self' ? null : 'self'),
                 ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // Creator type
-          Text(
-            l10n.adminActivationWhoAdded,
-            style: theme.textTheme.labelMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            children: [
-              _ToggleChip(
-                label: l10n.adminActivationSelfRegistered,
-                isSelected: _creatorType == 'self',
-                onTap: () => setState(() =>
-                    _creatorType = _creatorType == 'self' ? null : 'self'),
-              ),
-              _ToggleChip(
-                label: l10n.adminActivationSuperAdmin,
-                isSelected: _creatorType == 'superadmin',
-                onTap: () => setState(() => _creatorType =
-                    _creatorType == 'superadmin' ? null : 'superadmin'),
-              ),
-              _ToggleChip(
-                label: l10n.adminActivationByUser,
-                isSelected: _creatorType == 'user',
-                onTap: () => setState(() =>
-                    _creatorType = _creatorType == 'user' ? null : 'user'),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          // Status
-          Text(
-            l10n.adminActivationStatusFilter,
-            style: theme.textTheme.labelMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            children: [
-              _ToggleChip(
-                label: l10n.adminBusinessActive,
-                isSelected: _status == 'active',
-                onTap: () => setState(
-                    () => _status = _status == 'active' ? null : 'active'),
-              ),
-              _ToggleChip(
-                label: l10n.adminBusinessInactive,
-                isSelected: _status == 'inactive',
-                onTap: () => setState(
-                    () => _status = _status == 'inactive' ? null : 'inactive'),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          // Date range
-          Text(
-            l10n.adminActivationDateAdded,
-            style: theme.textTheme.labelMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: _DateBtn(
-                  label: _dateFrom != null ? _fmtDate(_dateFrom!) : l10n.from,
-                  isSet: _dateFrom != null,
-                  onTap: () => _pickDate(true),
-                  onClear: _dateFrom != null
-                      ? () => setState(() => _dateFrom = null)
-                      : null,
+                _ToggleChip(
+                  label: l10n.adminActivationSuperAdmin,
+                  isSelected: _creatorType == 'superadmin',
+                  onTap: () => setState(() => _creatorType =
+                      _creatorType == 'superadmin' ? null : 'superadmin'),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _DateBtn(
-                  label: _dateTo != null ? _fmtDate(_dateTo!) : l10n.to,
-                  isSet: _dateTo != null,
-                  onTap: () => _pickDate(false),
-                  onClear:
-                      _dateTo != null ? () => setState(() => _dateTo = null) : null,
+                _ToggleChip(
+                  label: l10n.adminActivationByUser,
+                  isSelected: _creatorType == 'user',
+                  onTap: () => setState(() =>
+                      _creatorType = _creatorType == 'user' ? null : 'user'),
                 ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 24),
-
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: () {
-                Navigator.pop(context);
-                widget.onApply(AdminActivationsFilter(
-                  creatorType: _creatorType,
-                  status: _status,
-                  dateFrom: _dateFrom,
-                  dateTo: _dateTo,
-                ));
-              },
-              child: Text(l10n.apply),
+              ],
             ),
-          ),
-        ],
+            const SizedBox(height: 16),
+            Text(l10n.adminActivationStatusFilter,
+                style: theme.textTheme.labelMedium?.copyWith(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: [
+                _ToggleChip(
+                  label: l10n.adminBusinessActive,
+                  isSelected: _status == 'active',
+                  onTap: () => setState(
+                      () => _status = _status == 'active' ? null : 'active'),
+                ),
+                _ToggleChip(
+                  label: l10n.adminBusinessInactive,
+                  isSelected: _status == 'inactive',
+                  onTap: () => setState(
+                      () => _status = _status == 'inactive' ? null : 'inactive'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(l10n.adminActivationDateAdded,
+                style: theme.textTheme.labelMedium?.copyWith(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: _DateBtn(
+                    label: _dateFrom != null ? _fmtDate(_dateFrom!) : l10n.from,
+                    isSet: _dateFrom != null,
+                    onTap: () => _pickDate(true),
+                    onClear: _dateFrom != null
+                        ? () => setState(() => _dateFrom = null)
+                        : null,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _DateBtn(
+                    label: _dateTo != null ? _fmtDate(_dateTo!) : l10n.to,
+                    isSet: _dateTo != null,
+                    onTap: () => _pickDate(false),
+                    onClear: _dateTo != null
+                        ? () => setState(() => _dateTo = null)
+                        : null,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

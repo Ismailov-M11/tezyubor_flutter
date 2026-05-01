@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/l10n/app_l10n.dart';
+import '../../../../shared/utils/right_panel.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/loading_overlay.dart';
 import '../../models/admin_models.dart';
@@ -147,7 +148,7 @@ class _RolesTab extends ConsumerWidget {
         title: l10n.adminNoRoles,
         subtitle: l10n.adminNoRolesSub,
         action: ElevatedButton.icon(
-          onPressed: () => _showCreateSheet(context, null),
+          onPressed: () => pushRightPanel(context, const _RoleFormPage()),
           icon: const Icon(Icons.add),
           label: Text(l10n.adminCreateRole),
         ),
@@ -165,25 +166,13 @@ class _RolesTab extends ConsumerWidget {
           itemBuilder: (_, i) => _RoleCard(role: state.roles[i]),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showCreateSheet(context, null),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => pushRightPanel(context, const _RoleFormPage()),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        icon: const Icon(Icons.add),
-        label: Text(l10n.adminCreateRole),
+        shape: const CircleBorder(),
+        child: const Icon(Icons.add, size: 26),
       ),
-    );
-  }
-
-  void _showCreateSheet(BuildContext context, AdminRole? role) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => _RoleFormSheet(role: role),
     );
   }
 }
@@ -232,7 +221,8 @@ class _RoleCard extends ConsumerWidget {
                     padding: const EdgeInsets.all(6),
                     minimumSize: const Size(32, 32),
                   ),
-                  onPressed: () => _showEditSheet(context, ref),
+                  onPressed: () =>
+                      pushRightPanel(context, _RoleFormPage(role: role)),
                 ),
                 const SizedBox(width: 6),
                 IconButton(
@@ -265,18 +255,6 @@ class _RoleCard extends ConsumerWidget {
     );
   }
 
-  void _showEditSheet(BuildContext context, WidgetRef ref) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => _RoleFormSheet(role: role),
-    );
-  }
-
   Future<void> _delete(BuildContext context, WidgetRef ref) async {
     final l10n = context.l10n;
     final ok = await showDialog<bool>(
@@ -303,8 +281,9 @@ class _RoleCard extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text(
-                  success ? context.l10n.adminRoleDeleted : context.l10n.error)),
+              content: Text(success
+                  ? context.l10n.adminRoleDeleted
+                  : context.l10n.error)),
         );
       }
     }
@@ -338,18 +317,18 @@ class _PermChip extends StatelessWidget {
   }
 }
 
-// ─── Role Form Sheet ──────────────────────────────────────────────────────────
+// ─── Role Form Page ───────────────────────────────────────────────────────────
 
-class _RoleFormSheet extends ConsumerStatefulWidget {
+class _RoleFormPage extends ConsumerStatefulWidget {
   final AdminRole? role;
 
-  const _RoleFormSheet({this.role});
+  const _RoleFormPage({this.role});
 
   @override
-  ConsumerState<_RoleFormSheet> createState() => _RoleFormSheetState();
+  ConsumerState<_RoleFormPage> createState() => _RoleFormPageState();
 }
 
-class _RoleFormSheetState extends ConsumerState<_RoleFormSheet> {
+class _RoleFormPageState extends ConsumerState<_RoleFormPage> {
   late final TextEditingController _nameController;
   late final Set<String> _selected;
   bool _isLoading = false;
@@ -395,7 +374,8 @@ class _RoleFormSheetState extends ConsumerState<_RoleFormSheet> {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(_isEdit ? l10n.adminRoleUpdated : l10n.adminRoleCreated),
+            content: Text(
+                _isEdit ? l10n.adminRoleUpdated : l10n.adminRoleCreated),
           ),
         );
       } else {
@@ -410,104 +390,78 @@ class _RoleFormSheetState extends ConsumerState<_RoleFormSheet> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
 
-    return DraggableScrollableSheet(
-      expand: false,
-      initialChildSize: 0.85,
-      maxChildSize: 0.95,
-      builder: (ctx, scrollController) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
+    return SwipeToDismiss(
+      child: Scaffold(
+        appBar: AppBar(
+          leading: const PanelBackButton(),
+          title:
+              Text(_isEdit ? l10n.adminEditRole : l10n.adminCreateRole),
         ),
-        child: Column(
+        body: ListView(
+          padding: EdgeInsets.fromLTRB(
+            20,
+            16,
+            20,
+            MediaQuery.of(context).viewInsets.bottom + 20,
+          ),
           children: [
+            TextField(
+              controller: _nameController,
+              decoration: InputDecoration(
+                labelText: l10n.adminRoleName,
+                hintText: l10n.adminRoleNameHint,
+                prefixIcon: const Icon(Icons.shield_outlined),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Text(l10n.adminPermissions,
+                    style: Theme.of(context).textTheme.titleSmall),
+                const Spacer(),
+                TextButton(
+                  onPressed: () =>
+                      setState(() => _selected.addAll(_allPermissions)),
+                  child: Text(l10n.adminSelectAll,
+                      style: const TextStyle(fontSize: 12)),
+                ),
+                TextButton(
+                  onPressed: () =>
+                      setState(() => _selected.clear()),
+                  child: Text(l10n.adminClearAll,
+                      style: const TextStyle(fontSize: 12)),
+                ),
+              ],
+            ),
             const SizedBox(height: 8),
-            Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              child: Row(
-                children: [
-                  Text(
-                    _isEdit ? l10n.adminEditRole : l10n.adminCreateRole,
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
-              ),
-            ),
-            const Divider(height: 1),
-            Expanded(
-              child: ListView(
-                controller: scrollController,
-                padding: const EdgeInsets.all(20),
-                children: [
-                  TextField(
-                    controller: _nameController,
-                    decoration: InputDecoration(
-                      labelText: l10n.adminRoleName,
-                      hintText: l10n.adminRoleNameHint,
-                      prefixIcon: const Icon(Icons.shield_outlined),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Row(
-                    children: [
-                      Text(l10n.adminPermissions,
-                          style: Theme.of(context).textTheme.titleSmall),
-                      const Spacer(),
-                      TextButton(
-                        onPressed: () => setState(
-                            () => _selected.addAll(_allPermissions)),
-                        child: Text(l10n.adminSelectAll,
-                            style: const TextStyle(fontSize: 12)),
-                      ),
-                      TextButton(
-                        onPressed: () =>
-                            setState(() => _selected.clear()),
-                        child: Text(l10n.adminClearAll,
-                            style: const TextStyle(fontSize: 12)),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  ..._permGroups.map((group) => _PermSection(
-                        group: group,
-                        selected: _selected,
-                        onToggle: (p, v) => setState(
-                            () => v ? _selected.add(p) : _selected.remove(p)),
-                        onToggleAll: (perms, selectAll) => setState(() =>
-                            selectAll
-                                ? _selected.addAll(perms)
-                                : _selected.removeAll(perms)),
-                      )),
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _submit,
-                      child: _isLoading
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                  strokeWidth: 2, color: Colors.white),
-                            )
-                          : Text(l10n.adminSaveRole),
-                    ),
-                  ),
-                ],
+            ..._permGroups.map((group) => _PermSection(
+                  group: group,
+                  selected: _selected,
+                  onToggle: (p, v) => setState(
+                      () => v ? _selected.add(p) : _selected.remove(p)),
+                  onToggleAll: (perms, selectAll) => setState(() =>
+                      selectAll
+                          ? _selected.addAll(perms)
+                          : _selected.removeAll(perms)),
+                )),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton(
+                onPressed: _isLoading ? null : _submit,
+                style: ElevatedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
+                ),
+                child: _isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white),
+                      )
+                    : Text(l10n.adminSaveRole),
               ),
             ),
           ],
@@ -544,7 +498,8 @@ class _PermSection extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 12),
       child: Container(
         decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+          color: theme.colorScheme.surfaceContainerHighest
+              .withValues(alpha: 0.4),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: anySelected
@@ -554,12 +509,13 @@ class _PermSection extends StatelessWidget {
         ),
         child: Column(
           children: [
-            // Section header with select-all checkbox
             InkWell(
               onTap: () => onToggleAll(perms, !allSelected),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(12)),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 10),
                 child: Row(
                   children: [
                     Icon(group.icon,
@@ -579,11 +535,14 @@ class _PermSection extends StatelessWidget {
                     ),
                     const Spacer(),
                     Checkbox(
-                      value: allSelected ? true : (anySelected ? null : false),
+                      value: allSelected
+                          ? true
+                          : (anySelected ? null : false),
                       tristate: true,
                       onChanged: (_) => onToggleAll(perms, !allSelected),
                       activeColor: AppColors.primary,
-                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      materialTapTargetSize:
+                          MaterialTapTargetSize.shrinkWrap,
                       visualDensity: VisualDensity.compact,
                     ),
                   ],
@@ -591,17 +550,17 @@ class _PermSection extends StatelessWidget {
               ),
             ),
             const Divider(height: 1, indent: 14, endIndent: 14),
-            // Individual permissions
             ...perms.map((p) {
               final isSelected = selected.contains(p);
               return InkWell(
                 onTap: () => onToggle(p, !isSelected),
                 borderRadius: p == perms.last
-                    ? const BorderRadius.vertical(bottom: Radius.circular(12))
+                    ? const BorderRadius.vertical(
+                        bottom: Radius.circular(12))
                     : BorderRadius.zero,
                 child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 2),
                   child: Row(
                     children: [
                       Expanded(
@@ -621,7 +580,8 @@ class _PermSection extends StatelessWidget {
                         value: isSelected,
                         onChanged: (v) => onToggle(p, v ?? false),
                         activeColor: AppColors.primary,
-                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        materialTapTargetSize:
+                            MaterialTapTargetSize.shrinkWrap,
                         visualDensity: VisualDensity.compact,
                       ),
                     ],
@@ -659,7 +619,8 @@ class _UsersTab extends ConsumerWidget {
         icon: Icons.people_outline,
         title: l10n.adminNoUsers,
         action: ElevatedButton.icon(
-          onPressed: () => _showUserSheet(context, null, rolesState.roles),
+          onPressed: () => pushRightPanel(
+              context, _UserFormPage(roles: rolesState.roles)),
           icon: const Icon(Icons.add),
           label: Text(l10n.adminCreateUser),
         ),
@@ -680,26 +641,14 @@ class _UsersTab extends ConsumerWidget {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showUserSheet(context, null, rolesState.roles),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => pushRightPanel(
+            context, _UserFormPage(roles: rolesState.roles)),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        icon: const Icon(Icons.add),
-        label: Text(l10n.adminCreateUser),
+        shape: const CircleBorder(),
+        child: const Icon(Icons.add, size: 26),
       ),
-    );
-  }
-
-  void _showUserSheet(
-      BuildContext context, AdminUser? user, List<AdminRole> roles) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => _UserFormSheet(user: user, roles: roles),
     );
   }
 }
@@ -774,18 +723,20 @@ class _UserCard extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
-                user.isActive ? l10n.adminUserActive : l10n.adminUserInactive,
+                user.isActive
+                    ? l10n.adminUserActive
+                    : l10n.adminUserInactive,
                 style: TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.w600,
-                  color:
-                      user.isActive ? AppColors.success : AppColors.error,
+                  color: user.isActive ? AppColors.success : AppColors.error,
                 ),
               ),
             ),
             IconButton(
               icon: const Icon(Icons.edit_outlined, size: 18),
-              onPressed: () => _showEditSheet(context, ref),
+              onPressed: () => pushRightPanel(
+                  context, _UserFormPage(user: user, roles: roles)),
             ),
           ],
         ),
@@ -793,33 +744,21 @@ class _UserCard extends ConsumerWidget {
       ),
     );
   }
-
-  void _showEditSheet(BuildContext context, WidgetRef ref) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => _UserFormSheet(user: user, roles: roles),
-    );
-  }
 }
 
-// ─── User Form Sheet ──────────────────────────────────────────────────────────
+// ─── User Form Page ───────────────────────────────────────────────────────────
 
-class _UserFormSheet extends ConsumerStatefulWidget {
+class _UserFormPage extends ConsumerStatefulWidget {
   final AdminUser? user;
   final List<AdminRole> roles;
 
-  const _UserFormSheet({this.user, required this.roles});
+  const _UserFormPage({this.user, required this.roles});
 
   @override
-  ConsumerState<_UserFormSheet> createState() => _UserFormSheetState();
+  ConsumerState<_UserFormPage> createState() => _UserFormPageState();
 }
 
-class _UserFormSheetState extends ConsumerState<_UserFormSheet> {
+class _UserFormPageState extends ConsumerState<_UserFormPage> {
   late final TextEditingController _nameCtrl;
   late final TextEditingController _emailCtrl;
   final _passwordCtrl = TextEditingController();
@@ -851,7 +790,10 @@ class _UserFormSheetState extends ConsumerState<_UserFormSheet> {
 
   Future<void> _submit() async {
     final l10n = context.l10n;
-    if (_nameCtrl.text.trim().isEmpty || _emailCtrl.text.trim().isEmpty) return;
+    if (_nameCtrl.text.trim().isEmpty ||
+        _emailCtrl.text.trim().isEmpty) {
+      return;
+    }
     if (!_isEdit && _passwordCtrl.text.trim().length < 6) return;
 
     setState(() => _isLoading = true);
@@ -884,8 +826,9 @@ class _UserFormSheetState extends ConsumerState<_UserFormSheet> {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text(
-                  _isEdit ? l10n.adminUserUpdated : l10n.adminUserCreated)),
+              content: Text(_isEdit
+                  ? l10n.adminUserUpdated
+                  : l10n.adminUserCreated)),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -899,130 +842,104 @@ class _UserFormSheetState extends ConsumerState<_UserFormSheet> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
 
-    return DraggableScrollableSheet(
-      expand: false,
-      initialChildSize: 0.9,
-      maxChildSize: 0.95,
-      builder: (ctx, scrollCtrl) => Padding(
-        padding:
-            EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-        child: Column(
+    return SwipeToDismiss(
+      child: Scaffold(
+        appBar: AppBar(
+          leading: const PanelBackButton(),
+          title:
+              Text(_isEdit ? l10n.adminEditUser : l10n.adminCreateUser),
+        ),
+        body: ListView(
+          padding: EdgeInsets.fromLTRB(
+            20,
+            16,
+            20,
+            MediaQuery.of(context).viewInsets.bottom + 20,
+          ),
           children: [
+            TextField(
+              controller: _nameCtrl,
+              decoration: InputDecoration(
+                labelText: l10n.adminProfileName,
+                prefixIcon: const Icon(Icons.person_outline),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _emailCtrl,
+              keyboardType: TextInputType.emailAddress,
+              decoration: InputDecoration(
+                labelText: l10n.adminUserEmail,
+                prefixIcon: const Icon(Icons.email_outlined),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _passwordCtrl,
+              obscureText: !_showPassword,
+              decoration: InputDecoration(
+                labelText: _isEdit
+                    ? '${l10n.passwordLbl} (${l10n.adminPasswordLeaveBlank})'
+                    : l10n.passwordLbl,
+                hintText: _isEdit ? '••••••' : l10n.adminPasswordMin,
+                prefixIcon: const Icon(Icons.lock_outline),
+                suffixIcon: IconButton(
+                  icon: Icon(_showPassword
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined),
+                  onPressed: () =>
+                      setState(() => _showPassword = !_showPassword),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SwitchListTile(
+              title: Text(l10n.adminActiveAccount),
+              value: _isActive,
+              onChanged: (v) => setState(() => _isActive = v),
+              activeTrackColor: AppColors.primary,
+              contentPadding: EdgeInsets.zero,
+            ),
+            const SizedBox(height: 12),
+            Text(l10n.adminUserRoles,
+                style: Theme.of(context).textTheme.titleSmall),
             const SizedBox(height: 8),
-            Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              child: Row(
-                children: [
-                  Text(
-                    _isEdit ? l10n.adminEditUser : l10n.adminCreateUser,
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
-              ),
-            ),
-            const Divider(height: 1),
-            Expanded(
-              child: ListView(
-                controller: scrollCtrl,
-                padding: const EdgeInsets.all(20),
-                children: [
-                  TextField(
-                    controller: _nameCtrl,
-                    decoration: InputDecoration(
-                      labelText: l10n.adminProfileName,
-                      prefixIcon: const Icon(Icons.person_outline),
+            if (widget.roles.isEmpty)
+              Text(l10n.adminNoAvailableRoles,
+                  style: Theme.of(context).textTheme.bodySmall)
+            else
+              ...widget.roles.map((role) => CheckboxListTile(
+                    title: Text(role.name),
+                    subtitle: Text(
+                      '${role.permissions.length} ${l10n.adminPermissions.toLowerCase()}',
+                      style: Theme.of(context).textTheme.bodySmall,
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _emailCtrl,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: InputDecoration(
-                      labelText: l10n.adminUserEmail,
-                      prefixIcon: const Icon(Icons.email_outlined),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _passwordCtrl,
-                    obscureText: !_showPassword,
-                    decoration: InputDecoration(
-                      labelText: _isEdit
-                          ? '${l10n.passwordLbl} (${l10n.adminPasswordLeaveBlank})'
-                          : l10n.passwordLbl,
-                      hintText: _isEdit ? '••••••' : l10n.adminPasswordMin,
-                      prefixIcon: const Icon(Icons.lock_outline),
-                      suffixIcon: IconButton(
-                        icon: Icon(_showPassword
-                            ? Icons.visibility_off_outlined
-                            : Icons.visibility_outlined),
-                        onPressed: () =>
-                            setState(() => _showPassword = !_showPassword),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  // Active toggle
-                  SwitchListTile(
-                    title: Text(l10n.adminActiveAccount),
-                    value: _isActive,
-                    onChanged: (v) => setState(() => _isActive = v),
-                    activeTrackColor: AppColors.primary,
+                    value: _selectedRoleIds.contains(role.id),
+                    onChanged: (v) => setState(() => v == true
+                        ? _selectedRoleIds.add(role.id)
+                        : _selectedRoleIds.remove(role.id)),
+                    activeColor: AppColors.primary,
+                    controlAffinity: ListTileControlAffinity.leading,
                     contentPadding: EdgeInsets.zero,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(l10n.adminUserRoles,
-                      style: Theme.of(context).textTheme.titleSmall),
-                  const SizedBox(height: 8),
-                  if (widget.roles.isEmpty)
-                    Text(l10n.adminNoAvailableRoles,
-                        style: Theme.of(context).textTheme.bodySmall)
-                  else
-                    ...widget.roles.map((role) => CheckboxListTile(
-                          title: Text(role.name),
-                          subtitle: Text(
-                            '${role.permissions.length} ${l10n.adminPermissions.toLowerCase()}',
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                          value: _selectedRoleIds.contains(role.id),
-                          onChanged: (v) => setState(() => v == true
-                              ? _selectedRoleIds.add(role.id)
-                              : _selectedRoleIds.remove(role.id)),
-                          activeColor: AppColors.primary,
-                          controlAffinity: ListTileControlAffinity.leading,
-                          contentPadding: EdgeInsets.zero,
-                        )),
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _submit,
-                      child: _isLoading
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                  strokeWidth: 2, color: Colors.white),
-                            )
-                          : Text(l10n.save),
-                    ),
-                  ),
-                ],
+                  )),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton(
+                onPressed: _isLoading ? null : _submit,
+                style: ElevatedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
+                ),
+                child: _isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white),
+                      )
+                    : Text(l10n.save),
               ),
             ),
           ],

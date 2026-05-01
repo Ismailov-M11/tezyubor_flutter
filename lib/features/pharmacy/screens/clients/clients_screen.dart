@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/l10n/app_l10n.dart';
+import '../../../../shared/utils/right_panel.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/loading_overlay.dart';
 import '../../models/client_model.dart';
@@ -40,10 +41,9 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
 
   void _openFilter() {
     final current = ref.read(clientsProvider).filter;
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => _ClientFilterSheet(
+    pushRightPanel(
+      context,
+      _ClientFilterPage(
         current: current,
         onApply: (f) => ref.read(clientsProvider.notifier).applyFilter(f),
         onClear: () => ref.read(clientsProvider.notifier).clearFilter(),
@@ -52,11 +52,7 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
   }
 
   void _showDetail(PharmacyClient client) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => _ClientDetailSheet(client: client),
-    );
+    pushRightPanel(context, _ClientDetailPage(client: client));
   }
 
   @override
@@ -237,108 +233,96 @@ class _ClientCard extends StatelessWidget {
   }
 }
 
-// ─── Client detail sheet ──────────────────────────────────────────────────────
+// ─── Client detail page ───────────────────────────────────────────────────────
 
-class _ClientDetailSheet extends StatelessWidget {
+class _ClientDetailPage extends StatelessWidget {
   final PharmacyClient client;
-  const _ClientDetailSheet({required this.client});
+  const _ClientDetailPage({required this.client});
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final theme = Theme.of(context);
 
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 20, right: 20, top: 8,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Handle
-          Container(
-            width: 40, height: 4,
-            margin: const EdgeInsets.only(bottom: 16),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.outline.withValues(alpha: 0.4),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          Text(l10n.clientDetails,
-              style: theme.textTheme.titleMedium
-                  ?.copyWith(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 16),
-
-          // Avatar + name
-          CircleAvatar(
-            radius: 32,
-            backgroundColor: AppColors.primary.withValues(alpha: 0.12),
-            child: Text(
-              client.name?.isNotEmpty == true
-                  ? client.name![0].toUpperCase()
-                  : client.phone[0],
-              style: const TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primary),
-            ),
-          ),
-          const SizedBox(height: 12),
-          if (client.name != null)
-            Text(client.name!,
-                style: theme.textTheme.titleMedium
-                    ?.copyWith(fontWeight: FontWeight.bold)),
-          Text(client.phone,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant)),
-          const SizedBox(height: 20),
-
-          // Stats row
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _StatChip(
-                  icon: Icons.receipt_long,
-                  value: '${client.ordersCount}',
-                  label: l10n.ordersCount),
-              if (client.lastOrderAt != null)
-                _StatChip(
-                    icon: Icons.access_time,
-                    value: _fmtDate(client.lastOrderAt!),
-                    label: l10n.lastOrder),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // Last address
-          if (client.lastAddress != null) ...[
-            const Divider(),
-            const SizedBox(height: 8),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Icon(Icons.location_on_outlined,
-                    size: 18, color: AppColors.primary),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(l10n.address,
-                          style: theme.textTheme.labelSmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant)),
-                      const SizedBox(height: 2),
-                      Text(client.lastAddress!,
-                          style: theme.textTheme.bodyMedium),
-                    ],
-                  ),
+    return SwipeToDismiss(
+      child: Scaffold(
+        appBar: AppBar(
+          leading: const PanelBackButton(),
+          title: Text(l10n.clientDetails),
+        ),
+        body: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+          children: [
+            Center(
+              child: CircleAvatar(
+                radius: 32,
+                backgroundColor: AppColors.primary.withValues(alpha: 0.12),
+                child: Text(
+                  client.name?.isNotEmpty == true
+                      ? client.name![0].toUpperCase()
+                      : client.phone[0],
+                  style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary),
                 ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            if (client.name != null)
+              Center(
+                child: Text(client.name!,
+                    style: theme.textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.bold)),
+              ),
+            Center(
+              child: Text(client.phone,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant)),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _StatChip(
+                    icon: Icons.receipt_long,
+                    value: '${client.ordersCount}',
+                    label: l10n.ordersCount),
+                if (client.lastOrderAt != null)
+                  _StatChip(
+                      icon: Icons.access_time,
+                      value: _fmtDate(client.lastOrderAt!),
+                      label: l10n.lastOrder),
               ],
             ),
+            if (client.lastAddress != null) ...[
+              const SizedBox(height: 16),
+              const Divider(),
+              const SizedBox(height: 12),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.location_on_outlined,
+                      size: 18, color: AppColors.primary),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(l10n.address,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant)),
+                        const SizedBox(height: 2),
+                        Text(client.lastAddress!,
+                            style: theme.textTheme.bodyMedium),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
-          const SizedBox(height: 8),
-        ],
+        ),
       ),
     );
   }
@@ -376,24 +360,24 @@ class _StatChip extends StatelessWidget {
       );
 }
 
-// ─── Client filter sheet ──────────────────────────────────────────────────────
+// ─── Client filter page ───────────────────────────────────────────────────────
 
-class _ClientFilterSheet extends StatefulWidget {
+class _ClientFilterPage extends StatefulWidget {
   final ClientsFilter current;
   final void Function(ClientsFilter) onApply;
   final VoidCallback onClear;
 
-  const _ClientFilterSheet({
+  const _ClientFilterPage({
     required this.current,
     required this.onApply,
     required this.onClear,
   });
 
   @override
-  State<_ClientFilterSheet> createState() => _ClientFilterSheetState();
+  State<_ClientFilterPage> createState() => _ClientFilterPageState();
 }
 
-class _ClientFilterSheetState extends State<_ClientFilterSheet> {
+class _ClientFilterPageState extends State<_ClientFilterPage> {
   DateTime? _dateFrom;
   DateTime? _dateTo;
 
@@ -411,97 +395,99 @@ class _ClientFilterSheetState extends State<_ClientFilterSheet> {
       firstDate: DateTime(2023),
       lastDate: DateTime.now().add(const Duration(days: 1)),
     );
-    if (picked != null) setState(() => isFrom ? _dateFrom = picked : _dateTo = picked);
+    if (picked != null) {
+      setState(() => isFrom ? _dateFrom = picked : _dateTo = picked);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
 
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 20, right: 20, top: 8,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Container(
-              width: 40, height: 4,
-              margin: const EdgeInsets.only(bottom: 16),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.4),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          Row(
-            children: [
-              Text(l10n.filter,
-                  style: Theme.of(context).textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.bold)),
-              const Spacer(),
-              TextButton(
-                onPressed: () { widget.onClear(); Navigator.pop(context); },
-                child: Text(l10n.clear),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          // Date range
-          Text(l10n.dateRange,
-              style: Theme.of(context).textTheme.labelMedium
-                  ?.copyWith(fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  icon: const Icon(Icons.calendar_today, size: 16),
-                  label: Text(_dateFrom != null ? _fmt(_dateFrom!) : l10n.from,
-                      style: const TextStyle(fontSize: 13)),
-                  onPressed: () => _pickDate(true),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: OutlinedButton.icon(
-                  icon: const Icon(Icons.calendar_today, size: 16),
-                  label: Text(_dateTo != null ? _fmt(_dateTo!) : l10n.to,
-                      style: const TextStyle(fontSize: 13)),
-                  onPressed: () => _pickDate(false),
-                ),
-              ),
-              if (_dateFrom != null || _dateTo != null)
-                IconButton(
-                  icon: const Icon(Icons.clear, size: 18),
-                  onPressed: () => setState(() { _dateFrom = null; _dateTo = null; }),
-                ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          const SizedBox(height: 20),
-
-          SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: ElevatedButton(
+    return SwipeToDismiss(
+      child: Scaffold(
+        appBar: AppBar(
+          leading: const PanelBackButton(),
+          title: Text(l10n.filter),
+          actions: [
+            TextButton(
               onPressed: () {
-                widget.onApply(ClientsFilter(
-                  search: widget.current.search,
-                  dateFrom: _dateFrom,
-                  dateTo: _dateTo,
-                ));
+                widget.onClear();
                 Navigator.pop(context);
               },
-              child: Text(l10n.apply),
+              child: Text(
+                l10n.clear,
+                style: const TextStyle(
+                    color: AppColors.primary, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
+        bottomNavigationBar: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            child: SizedBox(
+              height: 52,
+              child: ElevatedButton(
+                onPressed: () {
+                  widget.onApply(ClientsFilter(
+                    search: widget.current.search,
+                    dateFrom: _dateFrom,
+                    dateTo: _dateTo,
+                  ));
+                  Navigator.pop(context);
+                },
+                style: ElevatedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
+                ),
+                child: Text(l10n.apply),
+              ),
             ),
           ),
-        ],
+        ),
+        body: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+          children: [
+            Text(l10n.dateRange,
+                style: Theme.of(context)
+                    .textTheme
+                    .labelMedium
+                    ?.copyWith(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.calendar_today, size: 16),
+                    label: Text(
+                        _dateFrom != null ? _fmt(_dateFrom!) : l10n.from,
+                        style: const TextStyle(fontSize: 13)),
+                    onPressed: () => _pickDate(true),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.calendar_today, size: 16),
+                    label: Text(_dateTo != null ? _fmt(_dateTo!) : l10n.to,
+                        style: const TextStyle(fontSize: 13)),
+                    onPressed: () => _pickDate(false),
+                  ),
+                ),
+                if (_dateFrom != null || _dateTo != null)
+                  IconButton(
+                    icon: const Icon(Icons.clear, size: 18),
+                    onPressed: () =>
+                        setState(() {
+                          _dateFrom = null;
+                          _dateTo = null;
+                        }),
+                  ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

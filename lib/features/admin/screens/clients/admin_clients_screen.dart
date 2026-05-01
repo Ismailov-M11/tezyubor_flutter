@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/l10n/app_l10n.dart';
+import '../../../../shared/utils/right_panel.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/loading_overlay.dart';
 import '../../models/admin_models.dart';
@@ -70,16 +71,12 @@ class _AdminClientsScreenState extends ConsumerState<AdminClientsScreen> {
 
   void _openFilterSheet() {
     final current = ref.read(adminClientsProvider).filter;
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _ClientFilterSheet(
+    pushRightPanel(
+      context,
+      _ClientFilterPage(
         initial: current,
         onApply: (f) {
-          final withSearch = f.copyWith(
-            search: current.search,
-          );
+          final withSearch = f.copyWith(search: current.search);
           ref.read(adminClientsProvider.notifier).applyFilter(withSearch);
         },
         onClear: () => ref.read(adminClientsProvider.notifier).applyFilter(
@@ -90,12 +87,7 @@ class _AdminClientsScreenState extends ConsumerState<AdminClientsScreen> {
   }
 
   void _showDetail(AdminClient client) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _ClientDetailSheet(client: client),
-    );
+    pushRightPanel(context, _ClientDetailPage(client: client));
   }
 
   @override
@@ -266,12 +258,12 @@ class _ClientCard extends StatelessWidget {
   }
 }
 
-// ─── Client Detail Sheet ──────────────────────────────────────────────────────
+// ─── Client Detail Page ───────────────────────────────────────────────────────
 
-class _ClientDetailSheet extends StatelessWidget {
+class _ClientDetailPage extends StatelessWidget {
   final AdminClient client;
 
-  const _ClientDetailSheet({required this.client});
+  const _ClientDetailPage({required this.client});
 
   @override
   Widget build(BuildContext context) {
@@ -292,132 +284,87 @@ class _ClientDetailSheet extends StatelessWidget {
       }
     }
 
-    return DraggableScrollableSheet(
-      initialChildSize: 0.6,
-      minChildSize: 0.4,
-      maxChildSize: 0.9,
-      expand: false,
-      builder: (_, scrollController) => Container(
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+    return SwipeToDismiss(
+      child: Scaffold(
+        appBar: AppBar(
+          leading: const PanelBackButton(),
+          title: Row(
+            children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                child: Text(
+                  initials,
+                  style: const TextStyle(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (client.name != null)
+                      Text(client.name!,
+                          style: theme.textTheme.titleSmall
+                              ?.copyWith(fontWeight: FontWeight.w700)),
+                    Text(
+                      client.phone,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
-        child: Column(
+        body: ListView(
+          padding: const EdgeInsets.all(20),
           children: [
-            const SizedBox(height: 8),
-            Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: theme.colorScheme.outline.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(2),
-              ),
+            Row(
+              children: [
+                _StatTile(
+                  icon: Icons.receipt_long_outlined,
+                  label: l10n.adminClientsOrders,
+                  value: '${client.ordersCount}',
+                ),
+                const SizedBox(width: 12),
+                _StatTile(
+                  icon: Icons.access_time_outlined,
+                  label: l10n.adminClientLastOrder,
+                  value: formattedLastOrder ?? '—',
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            // Header
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 28,
-                    backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                    child: Text(
-                      initials,
-                      style: const TextStyle(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 20,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (client.name != null)
-                          Text(
-                            client.name!,
-                            style: theme.textTheme.titleMedium
-                                ?.copyWith(fontWeight: FontWeight.w700),
-                          ),
-                        Text(
-                          client.phone,
-                          style: client.name != null
-                              ? theme.textTheme.bodyMedium?.copyWith(
-                                  color: theme.colorScheme.onSurface
-                                      .withValues(alpha: 0.65),
-                                )
-                              : theme.textTheme.titleMedium
-                                  ?.copyWith(fontWeight: FontWeight.w700),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+            if (client.pharmacies.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              _SectionHeader(
+                icon: Icons.store_outlined,
+                title: l10n.adminClientCompanies,
+                count: client.pharmacies.length,
               ),
-            ),
-            const SizedBox(height: 16),
-            const Divider(height: 1),
-            Expanded(
-              child: ListView(
-                controller: scrollController,
-                padding: const EdgeInsets.all(20),
-                children: [
-                  // Stats row
-                  Row(
-                    children: [
-                      _StatTile(
-                        icon: Icons.receipt_long_outlined,
-                        label: l10n.adminClientsOrders,
-                        value: '${client.ordersCount}',
-                      ),
-                      const SizedBox(width: 12),
-                      _StatTile(
-                        icon: Icons.access_time_outlined,
-                        label: l10n.adminClientLastOrder,
-                        value: formattedLastOrder ?? '—',
-                      ),
-                    ],
-                  ),
-
-                  if (client.pharmacies.isNotEmpty) ...[
-                    const SizedBox(height: 20),
-                    _SectionHeader(
-                      icon: Icons.store_outlined,
-                      title: l10n.adminClientCompanies,
-                      count: client.pharmacies.length,
-                    ),
-                    const SizedBox(height: 8),
-                    ...client.pharmacies.map(
-                      (p) => _InfoRow(
-                        icon: Icons.store_mall_directory_outlined,
-                        text: p,
-                      ),
-                    ),
-                  ],
-
-                  if (client.addresses.isNotEmpty) ...[
-                    const SizedBox(height: 20),
-                    _SectionHeader(
-                      icon: Icons.location_on_outlined,
-                      title: l10n.adminClientAddresses,
-                      count: client.addresses.length,
-                    ),
-                    const SizedBox(height: 8),
-                    ...client.addresses.map(
-                      (a) => _InfoRow(
-                        icon: Icons.place_outlined,
-                        text: a,
-                      ),
-                    ),
-                  ],
-
-                  const SizedBox(height: 24),
-                ],
+              const SizedBox(height: 8),
+              ...client.pharmacies.map(
+                (p) => _InfoRow(icon: Icons.store_mall_directory_outlined, text: p),
               ),
-            ),
+            ],
+            if (client.addresses.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              _SectionHeader(
+                icon: Icons.location_on_outlined,
+                title: l10n.adminClientAddresses,
+                count: client.addresses.length,
+              ),
+              const SizedBox(height: 8),
+              ...client.addresses.map(
+                (a) => _InfoRow(icon: Icons.place_outlined, text: a),
+              ),
+            ],
+            const SizedBox(height: 24),
           ],
         ),
       ),
@@ -425,24 +372,24 @@ class _ClientDetailSheet extends StatelessWidget {
   }
 }
 
-// ─── Filter Sheet ─────────────────────────────────────────────────────────────
+// ─── Filter Page ──────────────────────────────────────────────────────────────
 
-class _ClientFilterSheet extends StatefulWidget {
+class _ClientFilterPage extends StatefulWidget {
   final AdminClientsFilter initial;
   final ValueChanged<AdminClientsFilter> onApply;
   final VoidCallback onClear;
 
-  const _ClientFilterSheet({
+  const _ClientFilterPage({
     required this.initial,
     required this.onApply,
     required this.onClear,
   });
 
   @override
-  State<_ClientFilterSheet> createState() => _ClientFilterSheetState();
+  State<_ClientFilterPage> createState() => _ClientFilterPageState();
 }
 
-class _ClientFilterSheetState extends State<_ClientFilterSheet> {
+class _ClientFilterPageState extends State<_ClientFilterPage> {
   late DateTime? _dateFrom;
   late DateTime? _dateTo;
   final _minOrdersController = TextEditingController();
@@ -489,54 +436,47 @@ class _ClientFilterSheetState extends State<_ClientFilterSheet> {
     final l10n = context.l10n;
     final theme = Theme.of(context);
 
-    return Padding(
-      padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: Container(
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surface,
-          borderRadius:
-              const BorderRadius.vertical(top: Radius.circular(20)),
+    return SwipeToDismiss(
+      child: Scaffold(
+        appBar: AppBar(
+          leading: const PanelBackButton(),
+          title: Text(l10n.filter),
+          actions: [
+            if (_activeCount > 0)
+              TextButton(
+                onPressed: () {
+                  widget.onClear();
+                  Navigator.pop(context);
+                },
+                child: Text(l10n.clear,
+                    style: const TextStyle(color: AppColors.primary)),
+              ),
+          ],
         ),
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.outline.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(2),
-                ),
+        bottomNavigationBar: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            child: SizedBox(
+              height: 52,
+              child: FilledButton(
+                onPressed: () {
+                  final minOrders =
+                      int.tryParse(_minOrdersController.text.trim());
+                  widget.onApply(AdminClientsFilter(
+                    dateFrom: _dateFrom,
+                    dateTo: _dateTo,
+                    minOrders: minOrders,
+                  ));
+                  Navigator.pop(context);
+                },
+                child: Text(l10n.apply),
               ),
             ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Text(
-                  l10n.filter,
-                  style: theme.textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.w700),
-                ),
-                const Spacer(),
-                if (_activeCount > 0)
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      widget.onClear();
-                    },
-                    child: Text(l10n.clear,
-                        style:
-                            const TextStyle(color: AppColors.primary)),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // Date range
+          ),
+        ),
+        body: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+          children: [
             Text(
               '${l10n.from} — ${l10n.to}',
               style: theme.textTheme.labelMedium?.copyWith(
@@ -547,9 +487,7 @@ class _ClientFilterSheetState extends State<_ClientFilterSheet> {
               children: [
                 Expanded(
                   child: _DateButton(
-                    label: _dateFrom != null
-                        ? _fmtDate(_dateFrom!)
-                        : l10n.from,
+                    label: _dateFrom != null ? _fmtDate(_dateFrom!) : l10n.from,
                     isSet: _dateFrom != null,
                     onTap: () => _pickDate(true),
                     onClear: _dateFrom != null
@@ -563,16 +501,14 @@ class _ClientFilterSheetState extends State<_ClientFilterSheet> {
                     label: _dateTo != null ? _fmtDate(_dateTo!) : l10n.to,
                     isSet: _dateTo != null,
                     onTap: () => _pickDate(false),
-                    onClear:
-                        _dateTo != null ? () => setState(() => _dateTo = null) : null,
+                    onClear: _dateTo != null
+                        ? () => setState(() => _dateTo = null)
+                        : null,
                   ),
                 ),
               ],
             ),
-
             const SizedBox(height: 16),
-
-            // Min orders
             Text(
               l10n.adminMinOrders,
               style: theme.textTheme.labelMedium?.copyWith(
@@ -595,25 +531,6 @@ class _ClientFilterSheetState extends State<_ClientFilterSheet> {
                     : null,
               ),
               onChanged: (_) => setState(() {}),
-            ),
-
-            const SizedBox(height: 24),
-
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: () {
-                  final minOrders =
-                      int.tryParse(_minOrdersController.text.trim());
-                  Navigator.pop(context);
-                  widget.onApply(AdminClientsFilter(
-                    dateFrom: _dateFrom,
-                    dateTo: _dateTo,
-                    minOrders: minOrders,
-                  ));
-                },
-                child: Text(l10n.apply),
-              ),
             ),
           ],
         ),

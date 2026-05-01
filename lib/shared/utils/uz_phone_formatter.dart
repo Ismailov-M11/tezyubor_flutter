@@ -59,4 +59,16 @@ class UzPhoneFormatter extends TextInputFormatter {
     final d = digitsOnly(value);
     return (d.length == 12 && d.startsWith('998')) ? '+$d' : value;
   }
+
+  /// Converts a stored phone (E.164 or raw digits) to the display format
+  /// "+998 XX YYY YY YY". Returns [initialValue] if the input is empty.
+  static String toDisplay(String? raw) {
+    if (raw == null || raw.isEmpty) return initialValue;
+    final d = digitsOnly(raw);
+    final sub = d.startsWith('998') && d.length >= 3
+        ? d.substring(3)
+        : d;
+    final trimmed = sub.length > 9 ? sub.substring(0, 9) : sub;
+    return _build(trimmed).text;
+  }
 }

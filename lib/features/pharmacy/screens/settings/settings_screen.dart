@@ -4,6 +4,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/l10n/app_l10n.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../shared/utils/right_panel.dart';
+import '../../../../shared/utils/uz_phone_formatter.dart';
 import '../../../../shared/widgets/custom_button.dart';
 import '../../../../shared/widgets/custom_text_field.dart';
 import '../../../../shared/widgets/loading_overlay.dart';
@@ -409,7 +410,7 @@ class _EditProfilePageState extends State<_EditProfilePage> {
     _nameCtrl = TextEditingController(
         text: widget.profile?.name as String? ?? '');
     _phoneCtrl = TextEditingController(
-        text: widget.profile?.phone as String? ?? '');
+        text: UzPhoneFormatter.toDisplay(widget.profile?.phone as String?));
     _emailCtrl = TextEditingController(
         text: widget.profile?.email as String? ?? '');
   }
@@ -437,7 +438,11 @@ class _EditProfilePageState extends State<_EditProfilePage> {
         .read(pharmacyProfileProvider.notifier)
         .update(
           name: name,
-          phone: _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
+          phone: UzPhoneFormatter.isComplete(_phoneCtrl.text)
+              ? UzPhoneFormatter.toE164(_phoneCtrl.text)
+              : _phoneCtrl.text.trim().isEmpty
+                  ? null
+                  : _phoneCtrl.text.trim(),
           email: _emailCtrl.text.trim().isEmpty ? null : _emailCtrl.text.trim(),
         );
     if (!mounted) return;
@@ -474,6 +479,7 @@ class _EditProfilePageState extends State<_EditProfilePage> {
               controller: _phoneCtrl,
               keyboardType: TextInputType.phone,
               textInputAction: TextInputAction.next,
+              inputFormatters: [UzPhoneFormatter()],
             ),
             const SizedBox(height: 12),
             CustomTextField(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import '../../core/constants/app_colors.dart';
 import 'status_badge.dart';
 
@@ -27,13 +28,11 @@ class StatusTabBar extends StatefulWidget implements PreferredSizeWidget {
 class _StatusTabBarState extends State<StatusTabBar> {
   late final List<GlobalKey> _keys;
   final _scrollCtrl = ScrollController();
-  int _lastScrolledIndex = 0;
 
   @override
   void initState() {
     super.initState();
     _keys = List.generate(widget.statuses.length, (_) => GlobalKey());
-    _lastScrolledIndex = widget.controller.index;
     widget.controller.animation!.addListener(_onAnimChange);
   }
 
@@ -53,19 +52,44 @@ class _StatusTabBarState extends State<StatusTabBar> {
     super.dispose();
   }
 
-  void _onAnimChange() {
-    final val = widget.controller.animation!.value;
-    final idx = val.round().clamp(0, widget.statuses.length - 1);
-    if (idx != _lastScrolledIndex) {
-      _lastScrolledIndex = idx;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        final ctx = _keys[idx].currentContext;
-        if (ctx != null) {
-          Scrollable.ensureVisible(ctx, alignment: 0.5, duration: Duration.zero);
-        }
-      });
+  // Returns the scroll offset that centers chip [i] in the viewport.
+  double? _chipCenterOffset(int i) {
+    if (!_scrollCtrl.hasClients) return null;
+    final ctx = _keys[i].currentContext;
+    if (ctx == null) return null;
+    final box = ctx.findRenderObject() as RenderBox?;
+    if (box == null || !box.attached) return null;
+    try {
+      final viewport = RenderAbstractViewport.of(box);
+      final reveal = viewport.getOffsetToReveal(box, 0.5);
+      return reveal.offset.clamp(
+        _scrollCtrl.position.minScrollExtent,
+        _scrollCtrl.position.maxScrollExtent,
+      );
+    } catch (_) {
+      return null;
     }
+  }
+
+  void _onAnimChange() {
+    if (!mounted || !_scrollCtrl.hasClients) return;
+    final val = widget.controller.animation!.value;
+    final lo = val.floor().clamp(0, widget.statuses.length - 1);
+    final hi = val.ceil().clamp(0, widget.statuses.length - 1);
+
+    if (lo == hi) {
+      final off = _chipCenterOffset(lo);
+      if (off != null) _scrollCtrl.jumpTo(off);
+      return;
+    }
+
+    final loOff = _chipCenterOffset(lo);
+    final hiOff = _chipCenterOffset(hi);
+    if (loOff == null || hiOff == null) return;
+
+    final frac = val - lo;
+    final target = loOff + (hiOff - loOff) * frac;
+    _scrollCtrl.jumpTo(target);
   }
 
   @override

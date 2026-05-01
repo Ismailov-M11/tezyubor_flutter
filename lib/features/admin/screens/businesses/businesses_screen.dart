@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/l10n/app_l10n.dart';
 import '../../../../shared/utils/right_panel.dart';
+import '../../../../shared/utils/uz_phone_formatter.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/loading_overlay.dart';
 import '../../../pharmacy/screens/location/location_picker_screen.dart';
@@ -812,7 +813,8 @@ class _PharmacyFormPageState extends ConsumerState<_PharmacyFormPage> {
     final p = widget.pharmacy;
     _nameCtrl = TextEditingController(text: p?.name ?? '');
     _ownerCtrl = TextEditingController(text: p?.ownerName ?? '');
-    _phoneCtrl = TextEditingController(text: p?.phone ?? '');
+    _phoneCtrl = TextEditingController(
+        text: UzPhoneFormatter.toDisplay(p?.phone));
     _loginCtrl = TextEditingController(text: p?.login ?? '');
     _addressCtrl = TextEditingController(text: p?.address ?? '');
     _isActive = p?.isActive ?? true;
@@ -870,7 +872,9 @@ class _PharmacyFormPageState extends ConsumerState<_PharmacyFormPage> {
             widget.pharmacy!.id,
             name: _nameCtrl.text.trim(),
             ownerName: _ownerCtrl.text.trim(),
-            phone: _phoneCtrl.text.trim(),
+            phone: UzPhoneFormatter.isComplete(_phoneCtrl.text)
+                ? UzPhoneFormatter.toE164(_phoneCtrl.text)
+                : _phoneCtrl.text.trim(),
             login: _loginCtrl.text.trim(),
             address: _addressCtrl.text.trim(),
             subscriptionExpiry: expiryStr,
@@ -884,7 +888,9 @@ class _PharmacyFormPageState extends ConsumerState<_PharmacyFormPage> {
       ok = await ref.read(adminPharmaciesProvider.notifier).create(
             name: _nameCtrl.text.trim(),
             ownerName: _ownerCtrl.text.trim(),
-            phone: _phoneCtrl.text.trim(),
+            phone: UzPhoneFormatter.isComplete(_phoneCtrl.text)
+                ? UzPhoneFormatter.toE164(_phoneCtrl.text)
+                : _phoneCtrl.text.trim(),
             login: _loginCtrl.text.trim(),
             password: _passwordCtrl.text.trim(),
             address: _addressCtrl.text.trim(),
@@ -946,6 +952,7 @@ class _PharmacyFormPageState extends ConsumerState<_PharmacyFormPage> {
             TextField(
               controller: _phoneCtrl,
               keyboardType: TextInputType.phone,
+              inputFormatters: [UzPhoneFormatter()],
               decoration: InputDecoration(
                 labelText: l10n.adminBusinessPhoneLbl,
                 prefixIcon: const Icon(Icons.phone_outlined),

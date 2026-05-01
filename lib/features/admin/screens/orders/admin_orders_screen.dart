@@ -59,7 +59,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
 
   String _tabLabel(String status, AppL10n l10n) {
     if (status == 'all') return l10n.adminStatusAll;
-    return StatusBadge.labelFor(status);
+    return StatusBadge.labelForL10n(status, l10n);
   }
 
   void _onSearchChanged(String v) {
@@ -522,11 +522,13 @@ class _AdminCreateOrderSheetState
     final bottom = MediaQuery.of(context).viewInsets.bottom;
     final screenHeight = MediaQuery.of(context).size.height;
 
-    return SizedBox(
-      height: (screenHeight * 0.9 - bottom).clamp(200.0, screenHeight),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
-        child: Column(
+    return Padding(
+      padding: EdgeInsets.only(bottom: bottom),
+      child: SizedBox(
+        height: (screenHeight * 0.9 - bottom).clamp(200.0, screenHeight),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Center(
@@ -717,6 +719,7 @@ class _AdminCreateOrderSheetState
               ),
             ),
           ],
+        ),
         ),
       ),
     );

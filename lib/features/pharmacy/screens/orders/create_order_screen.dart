@@ -98,10 +98,12 @@ class _CreateOrderSheetState extends ConsumerState<CreateOrderSheet> {
     final bottom = MediaQuery.of(context).viewInsets.bottom;
     final screenHeight = MediaQuery.of(context).size.height;
 
-    return SizedBox(
-      height: (screenHeight * 0.9 - bottom).clamp(200.0, screenHeight),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+    return Padding(
+      padding: EdgeInsets.only(bottom: bottom),
+      child: SizedBox(
+        height: (screenHeight * 0.9 - bottom).clamp(200.0, screenHeight),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
         child: Form(
           key: _formKey,
           child: Column(
@@ -253,6 +255,7 @@ class _CreateOrderSheetState extends ConsumerState<CreateOrderSheet> {
               ),
             ],
           ),
+        ),
         ),
       ),
     );

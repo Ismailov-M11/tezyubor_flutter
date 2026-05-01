@@ -77,10 +77,9 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
 
   static const _tabStatuses = ['all', ..._statusOrder];
 
-  String _tabLabel(String status) {
-    final l10n = context.l10n;
+  String _tabLabel(String status, AppL10n l10n) {
     if (status == 'all') return l10n.all;
-    return StatusBadge.labelFor(status);
+    return StatusBadge.labelForL10n(status, l10n);
   }
 
   @override
@@ -218,7 +217,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
               StatusTabBar(
                 statuses: _tabStatuses,
                 controller: _tabController,
-                getLabel: _tabLabel,
+                getLabel: (s) => _tabLabel(s, l10n),
               ),
             ],
           ),

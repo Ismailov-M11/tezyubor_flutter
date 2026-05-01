@@ -33,28 +33,6 @@ class SettingsScreen extends ConsumerWidget {
                 if (profile != null) _ProfileCard(profile: profile),
                 const SizedBox(height: 16),
 
-                // ── Appearance ──────────────────────────────────────────
-                _SettingsSection(
-                  title: l10n.appearance,
-                  children: [
-                    // Theme
-                    _SettingsTile(
-                      icon: Icons.palette_outlined,
-                      title: l10n.theme,
-                      subtitle: _themeLabel(themeMode, l10n),
-                      onTap: () => _showThemePicker(context, ref, l10n),
-                    ),
-                    // Language
-                    _SettingsTile(
-                      icon: Icons.language_outlined,
-                      title: l10n.language,
-                      subtitle: _localeName(locale.languageCode),
-                      onTap: () => _showLanguagePicker(context, ref, l10n),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-
                 // ── Account ─────────────────────────────────────────────
                 _SettingsSection(
                   title: l10n.account,
@@ -88,6 +66,28 @@ class SettingsScreen extends ConsumerWidget {
                               ),
                         ),
                       ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // ── Appearance ──────────────────────────────────────────
+                _SettingsSection(
+                  title: l10n.appearance,
+                  children: [
+                    // Theme
+                    _SettingsTile(
+                      icon: Icons.palette_outlined,
+                      title: l10n.theme,
+                      subtitle: _themeLabel(themeMode, l10n),
+                      onTap: () => _showThemePicker(context, ref, l10n),
+                    ),
+                    // Language
+                    _SettingsTile(
+                      icon: Icons.language_outlined,
+                      title: l10n.language,
+                      subtitle: _localeName(locale.languageCode),
+                      onTap: () => _showLanguagePicker(context, ref, l10n),
                     ),
                   ],
                 ),
@@ -141,11 +141,27 @@ class SettingsScreen extends ConsumerWidget {
       };
 
   void _showThemePicker(BuildContext context, WidgetRef ref, AppL10n l10n) {
-    pushRightPanel(context, _ThemePickerPage(l10n: l10n));
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _ThemePickerSheet(l10n: l10n),
+    );
   }
 
   void _showLanguagePicker(BuildContext context, WidgetRef ref, AppL10n l10n) {
-    pushRightPanel(context, _LanguagePickerPage(l10n: l10n));
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _LanguagePickerSheet(l10n: l10n),
+    );
   }
 
   void _showEditProfile(
@@ -154,7 +170,15 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   void _showChangePassword(BuildContext context, WidgetRef ref, AppL10n l10n) {
-    pushRightPanel(context, _ChangePasswordPage(ref: ref, l10n: l10n));
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _ChangePasswordPage(ref: ref, l10n: l10n),
+    );
   }
 
   Future<void> _logout(
@@ -183,101 +207,154 @@ class SettingsScreen extends ConsumerWidget {
   }
 }
 
-// ─── Theme picker page ────────────────────────────────────────────────────────
+// ─── Theme picker sheet ───────────────────────────────────────────────────────
 
-class _ThemePickerPage extends ConsumerWidget {
+class _ThemePickerSheet extends ConsumerWidget {
   final AppL10n l10n;
-  const _ThemePickerPage({required this.l10n});
+  const _ThemePickerSheet({required this.l10n});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final current = ref.watch(themeModeProvider);
-    return SwipeToDismiss(
-      child: Scaffold(
-        appBar: AppBar(
-          leading: const PanelBackButton(),
-          title: Text(l10n.theme),
-        ),
-        body: Column(
-          children: [
-            _ThemeOption(
-              icon: Icons.light_mode_outlined,
-              label: l10n.themeLight,
-              selected: current == ThemeMode.light,
-              onTap: () {
-                ref.read(themeModeProvider.notifier).setMode(ThemeMode.light);
-                Navigator.pop(context);
-              },
+    final theme = Theme.of(context);
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+          20, 0, 20, MediaQuery.of(context).viewInsets.bottom + 16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Center(
+            child: Container(
+              width: 48,
+              height: 4,
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.outline.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
-            _ThemeOption(
-              icon: Icons.dark_mode_outlined,
-              label: l10n.themeDark,
-              selected: current == ThemeMode.dark,
-              onTap: () {
-                ref.read(themeModeProvider.notifier).setMode(ThemeMode.dark);
-                Navigator.pop(context);
-              },
-            ),
-            _ThemeOption(
-              icon: Icons.brightness_auto_outlined,
-              label: l10n.themeSystem,
-              selected: current == ThemeMode.system,
-              onTap: () {
-                ref.read(themeModeProvider.notifier).setMode(ThemeMode.system);
-                Navigator.pop(context);
-              },
-            ),
-          ],
-        ),
+          ),
+          Row(
+            children: [
+              Text(l10n.theme,
+                  style: theme.textTheme.titleLarge
+                      ?.copyWith(fontWeight: FontWeight.w700)),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          _ThemeOption(
+            icon: Icons.light_mode_outlined,
+            label: l10n.themeLight,
+            selected: current == ThemeMode.light,
+            onTap: () {
+              ref.read(themeModeProvider.notifier).setMode(ThemeMode.light);
+              Navigator.pop(context);
+            },
+          ),
+          _ThemeOption(
+            icon: Icons.dark_mode_outlined,
+            label: l10n.themeDark,
+            selected: current == ThemeMode.dark,
+            onTap: () {
+              ref.read(themeModeProvider.notifier).setMode(ThemeMode.dark);
+              Navigator.pop(context);
+            },
+          ),
+          _ThemeOption(
+            icon: Icons.brightness_auto_outlined,
+            label: l10n.themeSystem,
+            selected: current == ThemeMode.system,
+            onTap: () {
+              ref.read(themeModeProvider.notifier).setMode(ThemeMode.system);
+              Navigator.pop(context);
+            },
+          ),
+          const SizedBox(height: 8),
+        ],
       ),
     );
   }
 }
 
-// ─── Language picker page ─────────────────────────────────────────────────────
+// ─── Language picker sheet ────────────────────────────────────────────────────
 
-class _LanguagePickerPage extends ConsumerWidget {
+class _LanguagePickerSheet extends ConsumerWidget {
   final AppL10n l10n;
-  const _LanguagePickerPage({required this.l10n});
+  const _LanguagePickerSheet({required this.l10n});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final current = ref.watch(localeProvider);
-    return SwipeToDismiss(
-      child: Scaffold(
-        appBar: AppBar(
-          leading: const PanelBackButton(),
-          title: Text(l10n.language),
-        ),
-        body: RadioGroup<String>(
-          groupValue: current.languageCode,
-          onChanged: (v) {
-            if (v != null) {
-              ref.read(localeProvider.notifier).setLocale(Locale(v));
-              Navigator.pop(context);
-            }
-          },
-          child: Column(
+    final theme = Theme.of(context);
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+          20, 0, 20, MediaQuery.of(context).viewInsets.bottom + 16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Center(
+            child: Container(
+              width: 48,
+              height: 4,
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.outline.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          Row(
             children: [
-              for (final (code, name) in [
-                ('ru', 'Русский'),
-                ('uz', "O'zbekcha"),
-                ('en', 'English'),
-              ])
-                ListTile(
-                  title: Text(name),
-                  leading: Radio<String>(
-                    value: code,
-                    activeColor: AppColors.primary,
-                  ),
-                  onTap: () {
-                    ref.read(localeProvider.notifier).setLocale(Locale(code));
-                    Navigator.pop(context);
-                  },
-                ),
+              Text(l10n.language,
+                  style: theme.textTheme.titleLarge
+                      ?.copyWith(fontWeight: FontWeight.w700)),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.pop(context),
+              ),
             ],
           ),
-        ),
+          const SizedBox(height: 4),
+          RadioGroup<String>(
+            groupValue: current.languageCode,
+            onChanged: (v) {
+              if (v != null) {
+                ref.read(localeProvider.notifier).setLocale(Locale(v));
+                Navigator.pop(context);
+              }
+            },
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final (code, name) in [
+                  ('ru', 'Русский'),
+                  ('uz', "O'zbekcha"),
+                  ('en', 'English'),
+                ])
+                  ListTile(
+                    title: Text(name),
+                    leading: Radio<String>(
+                      value: code,
+                      activeColor: AppColors.primary,
+                    ),
+                    onTap: () {
+                      ref
+                          .read(localeProvider.notifier)
+                          .setLocale(Locale(code));
+                      Navigator.pop(context);
+                    },
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
       ),
     );
   }

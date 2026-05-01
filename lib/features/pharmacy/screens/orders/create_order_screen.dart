@@ -27,6 +27,7 @@ class _CreateOrderSheetState extends ConsumerState<CreateOrderSheet> {
   @override
   void initState() {
     super.initState();
+    _phoneController.text = UzPhoneFormatter.initialValue;
     _phoneController.addListener(_onPhoneChanged);
   }
 
@@ -64,9 +65,9 @@ class _CreateOrderSheetState extends ConsumerState<CreateOrderSheet> {
       customerName: _nameController.text.trim().isEmpty
           ? null
           : _nameController.text.trim(),
-      customerPhone: _phoneController.text.trim().isEmpty
-          ? null
-          : _phoneController.text.trim(),
+      customerPhone: UzPhoneFormatter.isComplete(_phoneController.text)
+          ? UzPhoneFormatter.toE164(_phoneController.text)
+          : null,
     );
 
     final success = await ref.read(ordersProvider.notifier).createOrder(req);

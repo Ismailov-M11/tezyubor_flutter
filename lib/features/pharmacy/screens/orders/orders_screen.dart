@@ -101,7 +101,15 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
   }
 
   void _openCreate() {
-    pushRightPanel(context, const CreateOrderSheet());
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => const CreateOrderSheet(),
+    );
   }
 
   void _onSearchChanged(String value) {
@@ -126,9 +134,14 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
 
   void _openFilter() {
     final current = ref.read(ordersProvider).filter;
-    pushRightPanel(
-      context,
-      _OrderFilterPage(
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _OrderFilterSheet(
         current: current,
         onApply: (f) => ref.read(ordersProvider.notifier).applyFilter(f),
         onClear: () => ref.read(ordersProvider.notifier).clearFilter(),
@@ -1247,24 +1260,24 @@ class _ActionButtons extends StatelessWidget {
   }
 }
 
-// ─── Filter page ──────────────────────────────────────────────────────────────
+// ─── Filter sheet ─────────────────────────────────────────────────────────────
 
-class _OrderFilterPage extends StatefulWidget {
+class _OrderFilterSheet extends StatefulWidget {
   final OrdersFilter current;
   final void Function(OrdersFilter) onApply;
   final VoidCallback onClear;
 
-  const _OrderFilterPage({
+  const _OrderFilterSheet({
     required this.current,
     required this.onApply,
     required this.onClear,
   });
 
   @override
-  State<_OrderFilterPage> createState() => _OrderFilterPageState();
+  State<_OrderFilterSheet> createState() => _OrderFilterSheetState();
 }
 
-class _OrderFilterPageState extends State<_OrderFilterPage> {
+class _OrderFilterSheetState extends State<_OrderFilterSheet> {
   late List<String> _couriers;
   DateTime? _dateFrom;
   DateTime? _dateTo;
@@ -1299,24 +1312,40 @@ class _OrderFilterPageState extends State<_OrderFilterPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final mutedFg = isDark
         ? AppColors.mutedForegroundDark
         : AppColors.mutedForegroundLight;
 
-    return SwipeToDismiss(
-      child: Scaffold(
-        appBar: AppBar(
-          leading: const PanelBackButton(),
-          title: Row(
-            mainAxisSize: MainAxisSize.min,
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+          20, 0, 20, MediaQuery.of(context).viewInsets.bottom + 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 48,
+              height: 4,
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.outline.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          Row(
             children: [
-              Text(l10n.filter),
+              Text(l10n.filter,
+                  style: theme.textTheme.titleLarge
+                      ?.copyWith(fontWeight: FontWeight.w700)),
               if (_count > 0) ...[
                 const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
                     color: AppColors.primary,
                     borderRadius: BorderRadius.circular(100),
@@ -1328,99 +1357,87 @@ class _OrderFilterPageState extends State<_OrderFilterPage> {
                           fontWeight: FontWeight.bold)),
                 ),
               ],
+              const Spacer(),
+              TextButton(
+                onPressed: () {
+                  widget.onClear();
+                  Navigator.pop(context);
+                },
+                child: Text(l10n.clear),
+              ),
             ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                widget.onClear();
-                Navigator.pop(context);
-              },
-              child: Text(l10n.clear),
+          const SizedBox(height: 12),
+          Text(
+            l10n.courier.toUpperCase(),
+            style: TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.8,
+              color: mutedFg,
             ),
-          ],
-        ),
-        body: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(left: 4, bottom: 8),
-              child: Text(
-                l10n.courier.toUpperCase(),
-                style: TextStyle(
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.8,
-                  color: mutedFg,
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _allCouriers.map((c) {
+              final sel = _couriers.contains(c);
+              return _ToggleChip(
+                label: c[0].toUpperCase() + c.substring(1),
+                selected: sel,
+                color: AppColors.primary,
+                onTap: () => setState(
+                    () => sel ? _couriers.remove(c) : _couriers.add(c)),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            l10n.dateRange.toUpperCase(),
+            style: TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.8,
+              color: mutedFg,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.calendar_today, size: 15),
+                  label: Text(
+                    _dateFrom != null ? _fmt(_dateFrom!) : l10n.from,
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                  onPressed: () => _pickDate(true),
                 ),
               ),
-            ),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _allCouriers.map((c) {
-                final sel = _couriers.contains(c);
-                return _ToggleChip(
-                  label: c[0].toUpperCase() + c.substring(1),
-                  selected: sel,
-                  color: AppColors.primary,
-                  onTap: () => setState(() =>
-                      sel ? _couriers.remove(c) : _couriers.add(c)),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 20),
-            Padding(
-              padding: const EdgeInsets.only(left: 4, bottom: 8),
-              child: Text(
-                l10n.dateRange.toUpperCase(),
-                style: TextStyle(
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.8,
-                  color: mutedFg,
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.calendar_today, size: 15),
+                  label: Text(
+                    _dateTo != null ? _fmt(_dateTo!) : l10n.to,
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                  onPressed: () => _pickDate(false),
                 ),
               ),
-            ),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    icon: const Icon(Icons.calendar_today, size: 15),
-                    label: Text(
-                      _dateFrom != null ? _fmt(_dateFrom!) : l10n.from,
-                      style: const TextStyle(fontSize: 13),
-                    ),
-                    onPressed: () => _pickDate(true),
-                  ),
+              if (_dateFrom != null || _dateTo != null)
+                IconButton(
+                  icon: const Icon(Icons.clear, size: 16),
+                  onPressed: () => setState(() {
+                    _dateFrom = null;
+                    _dateTo = null;
+                  }),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    icon: const Icon(Icons.calendar_today, size: 15),
-                    label: Text(
-                      _dateTo != null ? _fmt(_dateTo!) : l10n.to,
-                      style: const TextStyle(fontSize: 13),
-                    ),
-                    onPressed: () => _pickDate(false),
-                  ),
-                ),
-                if (_dateFrom != null || _dateTo != null)
-                  IconButton(
-                    icon: const Icon(Icons.clear, size: 16),
-                    onPressed: () => setState(() {
-                      _dateFrom = null;
-                      _dateTo = null;
-                    }),
-                  ),
-              ],
-            ),
-          ],
-        ),
-        bottomNavigationBar: Padding(
-          padding: EdgeInsets.fromLTRB(
-              16, 8, 16, MediaQuery.of(context).padding.bottom + 16),
-          child: SizedBox(
+            ],
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
             width: double.infinity,
             height: 52,
             child: ElevatedButton(
@@ -1441,7 +1458,7 @@ class _OrderFilterPageState extends State<_OrderFilterPage> {
               child: Text(l10n.apply),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

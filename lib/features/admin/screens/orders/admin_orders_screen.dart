@@ -85,9 +85,14 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
 
   void _openFilter() {
     final current = ref.read(adminOrdersProvider).filter;
-    pushRightPanel(
-      context,
-      _AdminOrderFilterPage(
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _AdminOrderFilterSheet(
         current: current,
         onApply: (f) => ref.read(adminOrdersProvider.notifier).applyFilter(f),
         onClear: () => ref.read(adminOrdersProvider.notifier).clearFilter(),
@@ -96,11 +101,18 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
   }
 
   void _openCreate() {
-    final pharmacies = ref.read(adminPharmaciesProvider).pharmacies;
-    if (pharmacies.isEmpty) {
+    if (ref.read(adminPharmaciesProvider).pharmacies.isEmpty) {
       ref.read(adminPharmaciesProvider.notifier).load();
     }
-    pushRightPanel(context, const _CreateOrderPage());
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => const _AdminCreateOrderSheet(),
+    );
   }
 
   @override
@@ -211,24 +223,24 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
   }
 }
 
-// ─── Filter page ──────────────────────────────────────────────────────────────
+// ─── Filter sheet ─────────────────────────────────────────────────────────────
 
-class _AdminOrderFilterPage extends StatefulWidget {
+class _AdminOrderFilterSheet extends StatefulWidget {
   final AdminOrdersFilter current;
   final void Function(AdminOrdersFilter) onApply;
   final VoidCallback onClear;
 
-  const _AdminOrderFilterPage({
+  const _AdminOrderFilterSheet({
     required this.current,
     required this.onApply,
     required this.onClear,
   });
 
   @override
-  State<_AdminOrderFilterPage> createState() => _AdminOrderFilterPageState();
+  State<_AdminOrderFilterSheet> createState() => _AdminOrderFilterSheetState();
 }
 
-class _AdminOrderFilterPageState extends State<_AdminOrderFilterPage> {
+class _AdminOrderFilterSheetState extends State<_AdminOrderFilterSheet> {
   String? _courier;
   DateTime? _dateFrom;
   DateTime? _dateTo;
@@ -263,157 +275,155 @@ class _AdminOrderFilterPageState extends State<_AdminOrderFilterPage> {
     final l10n = context.l10n;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
-    final cardBg = isDark ? AppColors.cardDark : Colors.white;
+    final mutedFg = isDark
+        ? AppColors.mutedForegroundDark
+        : AppColors.mutedForegroundLight;
 
-    return SwipeToDismiss(
-      child: Scaffold(
-        appBar: AppBar(
-          leading: const PanelBackButton(),
-          title: Row(
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+          20, 0, 20, MediaQuery.of(context).viewInsets.bottom + 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 48,
+              height: 4,
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.outline.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          Row(
             children: [
-              Text(l10n.filter),
+              Text(l10n.filter,
+                  style: theme.textTheme.titleLarge
+                      ?.copyWith(fontWeight: FontWeight.w700)),
               if (_count > 0) ...[
                 const SizedBox(width: 8),
                 Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
                     color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(100),
                   ),
-                  child: Text(
-                    '$_count',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  child: Text('$_count',
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold)),
                 ),
               ],
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                widget.onClear();
-                Navigator.pop(context);
-              },
-              child: Text(
-                l10n.clear,
-                style: const TextStyle(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
-                ),
-              ),
-            ),
-          ],
-        ),
-        bottomNavigationBar: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            child: SizedBox(
-              height: 52,
-              child: ElevatedButton(
+              const Spacer(),
+              TextButton(
                 onPressed: () {
-                  widget.onApply(AdminOrdersFilter(
-                    search: widget.current.search,
-                    courier: _courier,
-                    dateFrom: _dateFrom,
-                    dateTo: _dateTo,
-                  ));
+                  widget.onClear();
                   Navigator.pop(context);
                 },
-                style: ElevatedButton.styleFrom(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-                child: Text(l10n.apply),
+                child: Text(l10n.clear),
               ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            l10n.adminOrderCourier.toUpperCase(),
+            style: TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.8,
+              color: mutedFg,
             ),
           ),
-        ),
-        body: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
-          children: [
-            _SheetSectionLabel(l10n.adminOrderCourier),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: cardBg,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: borderColor),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _ToggleChip(
+                label: l10n.adminCourierAll,
+                selected: _courier == null,
+                color: AppColors.primary,
+                onTap: () => setState(() => _courier = null),
               ),
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _ToggleChip(
-                    label: l10n.adminCourierAll,
-                    selected: _courier == null,
+              ..._allCouriers.map((c) => _ToggleChip(
+                    label: c[0].toUpperCase() + c.substring(1),
+                    selected: _courier == c,
                     color: AppColors.primary,
-                    onTap: () => setState(() => _courier = null),
-                  ),
-                  ..._allCouriers.map((c) => _ToggleChip(
-                        label: c[0].toUpperCase() + c.substring(1),
-                        selected: _courier == c,
-                        color: AppColors.primary,
-                        onTap: () =>
-                            setState(() => _courier = _courier == c ? null : c),
-                      )),
-                ],
-              ),
+                    onTap: () =>
+                        setState(() => _courier = _courier == c ? null : c),
+                  )),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Text(
+            l10n.dateRange.toUpperCase(),
+            style: TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.8,
+              color: mutedFg,
             ),
-            const SizedBox(height: 16),
-            _SheetSectionLabel(l10n.dateRange),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: cardBg,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: borderColor),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      icon: const Icon(Icons.calendar_today, size: 15),
-                      label: Text(
-                        _dateFrom != null ? _fmt(_dateFrom!) : l10n.from,
-                        style: const TextStyle(fontSize: 13),
-                      ),
-                      onPressed: () => _pickDate(true),
-                    ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.calendar_today, size: 15),
+                  label: Text(
+                    _dateFrom != null ? _fmt(_dateFrom!) : l10n.from,
+                    style: const TextStyle(fontSize: 13),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      icon: const Icon(Icons.calendar_today, size: 15),
-                      label: Text(
-                        _dateTo != null ? _fmt(_dateTo!) : l10n.to,
-                        style: const TextStyle(fontSize: 13),
-                      ),
-                      onPressed: () => _pickDate(false),
-                    ),
-                  ),
-                  if (_dateFrom != null || _dateTo != null)
-                    IconButton(
-                      icon: const Icon(Icons.clear, size: 16),
-                      onPressed: () => setState(() {
-                        _dateFrom = null;
-                        _dateTo = null;
-                      }),
-                    ),
-                ],
+                  onPressed: () => _pickDate(true),
+                ),
               ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.calendar_today, size: 15),
+                  label: Text(
+                    _dateTo != null ? _fmt(_dateTo!) : l10n.to,
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                  onPressed: () => _pickDate(false),
+                ),
+              ),
+              if (_dateFrom != null || _dateTo != null)
+                IconButton(
+                  icon: const Icon(Icons.clear, size: 16),
+                  onPressed: () => setState(() {
+                    _dateFrom = null;
+                    _dateTo = null;
+                  }),
+                ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: ElevatedButton(
+              onPressed: () {
+                widget.onApply(AdminOrdersFilter(
+                  search: widget.current.search,
+                  courier: _courier,
+                  dateFrom: _dateFrom,
+                  dateTo: _dateTo,
+                ));
+                Navigator.pop(context);
+              },
+              style: ElevatedButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
+              ),
+              child: Text(l10n.apply),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -422,18 +432,21 @@ class _AdminOrderFilterPageState extends State<_AdminOrderFilterPage> {
       '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}';
 }
 
-// ─── Create order page ────────────────────────────────────────────────────────
+// ─── Create order sheet ───────────────────────────────────────────────────────
 
-class _CreateOrderPage extends ConsumerStatefulWidget {
-  const _CreateOrderPage();
+class _AdminCreateOrderSheet extends ConsumerStatefulWidget {
+  const _AdminCreateOrderSheet();
 
   @override
-  ConsumerState<_CreateOrderPage> createState() => _CreateOrderPageState();
+  ConsumerState<_AdminCreateOrderSheet> createState() =>
+      _AdminCreateOrderSheetState();
 }
 
-class _CreateOrderPageState extends ConsumerState<_CreateOrderPage> {
+class _AdminCreateOrderSheetState
+    extends ConsumerState<_AdminCreateOrderSheet> {
   final _commentCtrl = TextEditingController();
-  final _phoneCtrl = TextEditingController();
+  final _phoneCtrl =
+      TextEditingController(text: UzPhoneFormatter.initialValue);
   final _nameCtrl = TextEditingController();
   final _amountCtrl = TextEditingController();
   String? _selectedPharmacyId;
@@ -444,11 +457,6 @@ class _CreateOrderPageState extends ConsumerState<_CreateOrderPage> {
   void initState() {
     super.initState();
     _phoneCtrl.addListener(_onPhoneChanged);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (ref.read(adminPharmaciesProvider).pharmacies.isEmpty) {
-        ref.read(adminPharmaciesProvider.notifier).load();
-      }
-    });
   }
 
   void _onPhoneChanged() {
@@ -482,8 +490,12 @@ class _CreateOrderPageState extends ConsumerState<_CreateOrderPage> {
           pharmacyId: _selectedPharmacyId!,
           comment: _commentCtrl.text.trim(),
           medicinesTotal: double.tryParse(_amountCtrl.text.trim()),
-          customerPhone: _phoneCtrl.text.trim(),
-          customerName: _nameCtrl.text.trim(),
+          customerPhone: UzPhoneFormatter.isComplete(_phoneCtrl.text)
+              ? UzPhoneFormatter.toE164(_phoneCtrl.text)
+              : null,
+          customerName: _nameCtrl.text.trim().isEmpty
+              ? null
+              : _nameCtrl.text.trim(),
         );
     if (mounted) {
       setState(() => _isLoading = false);
@@ -507,20 +519,50 @@ class _CreateOrderPageState extends ConsumerState<_CreateOrderPage> {
     final cardBg = isDark ? AppColors.cardDark : Colors.white;
     final pharmacies = ref.watch(adminPharmaciesProvider).pharmacies;
 
-    return SwipeToDismiss(
-      child: Scaffold(
-        appBar: AppBar(
-          leading: const PanelBackButton(),
-          title: Text(l10n.adminCreateOrderTitle),
-        ),
-        body: ListView(
-          padding: EdgeInsets.fromLTRB(
-            20,
-            16,
-            20,
-            MediaQuery.of(context).viewInsets.bottom + 20,
-          ),
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+          20, 0, 20, MediaQuery.of(context).viewInsets.bottom + 24),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Center(
+              child: Container(
+                width: 48,
+                height: 4,
+                margin: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.outline.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Row(
+              children: [
+                Text(l10n.adminCreateOrderTitle,
+                    style: theme.textTheme.titleLarge
+                        ?.copyWith(fontWeight: FontWeight.w700)),
+                const Spacer(),
+                GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color:
+                          theme.colorScheme.onSurface.withValues(alpha: 0.06),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.close,
+                        size: 16,
+                        color: theme.colorScheme.onSurfaceVariant),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+
             _SheetSectionLabel(l10n.adminSelectPharmacy),
             const SizedBox(height: 8),
             GestureDetector(
@@ -539,13 +581,11 @@ class _CreateOrderPageState extends ConsumerState<_CreateOrderPage> {
                 ),
                 child: Row(
                   children: [
-                    Icon(
-                      Icons.storefront_outlined,
-                      size: 18,
-                      color: _selectedPharmacyId != null
-                          ? AppColors.primary
-                          : theme.colorScheme.onSurfaceVariant,
-                    ),
+                    Icon(Icons.storefront_outlined,
+                        size: 18,
+                        color: _selectedPharmacyId != null
+                            ? AppColors.primary
+                            : theme.colorScheme.onSurfaceVariant),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
@@ -652,8 +692,7 @@ class _CreateOrderPageState extends ConsumerState<_CreateOrderPage> {
                     _isLoading || _selectedPharmacyId == null ? null : _submit,
                 style: ElevatedButton.styleFrom(
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
+                      borderRadius: BorderRadius.circular(16)),
                 ),
                 child: _isLoading
                     ? const SizedBox(

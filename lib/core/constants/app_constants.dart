@@ -2,8 +2,7 @@ class AppConstants {
   // ─── API ────────────────────────────────────────────────────────────────────
   static const bool useDev = false;
 
-  static const String baseUrl =
-      'https://medicationsdeliverybackend-production.up.railway.app/api';
+  static const String baseUrl = 'https://api.tezyubor.uz/api';
 
   // Для Android эмулятора 10.0.2.2 = localhost хоста
   // Для физического устройства замени на IP своего ПК: http://192.168.1.X:5000/api

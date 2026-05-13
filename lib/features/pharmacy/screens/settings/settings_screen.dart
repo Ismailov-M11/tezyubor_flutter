@@ -39,6 +39,16 @@ class SettingsScreen extends ConsumerWidget {
               children: [
                 // Profile card
                 if (profile != null) _ProfileCard(profile: profile),
+                const SizedBox(height: 12),
+
+                // ── Subscription card ────────────────────────────────────
+                _SubscriptionCard(
+                  profile: profile,
+                  onTap: () => pushRightPanel(
+                    context,
+                    _SubscriptionPage(profile: profile),
+                  ),
+                ),
                 const SizedBox(height: 16),
 
                 // ── Account ─────────────────────────────────────────────
@@ -845,6 +855,354 @@ class _SuccessBanner extends StatelessWidget {
         child: Text(message,
             style: const TextStyle(color: AppColors.success)),
       );
+}
+
+// ─── Subscription card ────────────────────────────────────────────────────────
+
+class _SubscriptionCard extends StatelessWidget {
+  final dynamic profile;
+  final VoidCallback onTap;
+
+  const _SubscriptionCard({required this.profile, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    final days = profile?.daysUntilExpiry as int?;
+    final expiry = profile?.subscriptionExpiry as String?;
+    final isExpired = days != null && days < 0;
+    final isSoon = days != null && days >= 0 && days <= 14;
+
+    final statusColor = isExpired
+        ? AppColors.error
+        : isSoon
+            ? AppColors.warning
+            : AppColors.success;
+
+    final statusLabel = isExpired
+        ? l10n.subscriptionExpired
+        : isSoon
+            ? l10n.subscriptionExpiringSoon
+            : l10n.subscriptionActive;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: isExpired
+                ? [
+                    AppColors.error.withValues(alpha: isDark ? 0.25 : 0.12),
+                    AppColors.error.withValues(alpha: isDark ? 0.10 : 0.05),
+                  ]
+                : [
+                    AppColors.primary.withValues(alpha: isDark ? 0.25 : 0.12),
+                    AppColors.primary.withValues(alpha: isDark ? 0.08 : 0.04),
+                  ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isExpired
+                ? AppColors.error.withValues(alpha: 0.3)
+                : AppColors.primary.withValues(alpha: 0.25),
+          ),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+        child: Row(
+          children: [
+            Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                color: statusColor.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(
+                isExpired
+                    ? Icons.credit_card_off_outlined
+                    : Icons.verified_outlined,
+                color: statusColor,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.subscription,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.4,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: statusColor.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          statusLabel,
+                          style: TextStyle(
+                            color: statusColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      if (days != null && !isExpired) ...[
+                        const SizedBox(width: 8),
+                        Text(
+                          '$days ${l10n.daysLeft}',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  if (expiry != null) ...[
+                    const SizedBox(height: 3),
+                    Text(
+                      '${l10n.subscriptionValidUntil}: ${l10n.fmtDate(expiry)}',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right,
+              color: theme.colorScheme.onSurfaceVariant,
+              size: 20,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Subscription page ────────────────────────────────────────────────────────
+
+class _SubscriptionPage extends StatelessWidget {
+  final dynamic profile;
+  const _SubscriptionPage({required this.profile});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    final days = profile?.daysUntilExpiry as int?;
+    final expiry = profile?.subscriptionExpiry as String?;
+    final isExpired = days != null && days < 0;
+    final isSoon = days != null && days >= 0 && days <= 14;
+
+    final statusColor = isExpired
+        ? AppColors.error
+        : isSoon
+            ? AppColors.warning
+            : AppColors.success;
+
+    final statusLabel = isExpired
+        ? l10n.subscriptionExpired
+        : isSoon
+            ? l10n.subscriptionExpiringSoon
+            : l10n.subscriptionActive;
+
+    return SwipeToDismiss(
+      child: Scaffold(
+        appBar: AppBar(
+          leading: const PanelBackButton(),
+          title: Text(l10n.subscription),
+        ),
+        body: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(24, 32, 24, 32),
+            children: [
+              // ── Header icon ──────────────────────────────────────────
+              Center(
+                child: Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: isDark ? 0.15 : 0.1),
+                    borderRadius: BorderRadius.circular(28),
+                    border: Border.all(
+                        color: statusColor.withValues(alpha: 0.25)),
+                  ),
+                  child: Icon(
+                    isExpired
+                        ? Icons.credit_card_off_outlined
+                        : Icons.verified_outlined,
+                    color: statusColor,
+                    size: 48,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    statusLabel,
+                    style: TextStyle(
+                      color: statusColor,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 28),
+
+              // ── Info block ───────────────────────────────────────────
+              Container(
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.cardDark : Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: isDark
+                        ? AppColors.borderDark
+                        : AppColors.borderLight,
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    if (expiry != null)
+                      _SubInfoRow(
+                        icon: Icons.calendar_today_outlined,
+                        label: l10n.subscriptionValidUntil,
+                        value: l10n.fmtDate(expiry),
+                        valueColor: isExpired ? AppColors.error : null,
+                      ),
+                    if (days != null) ...[
+                      if (expiry != null)
+                        Divider(
+                          height: 1,
+                          indent: 52,
+                          color: theme.colorScheme.outline
+                              .withValues(alpha: 0.4),
+                        ),
+                      _SubInfoRow(
+                        icon: Icons.hourglass_bottom_outlined,
+                        label: isExpired
+                            ? l10n.subscriptionExpired
+                            : l10n.daysLeft,
+                        value: isExpired
+                            ? '${days.abs()} ${l10n.daysLeft}'
+                            : '$days ${l10n.daysLeft}',
+                        valueColor: statusColor,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // ── Renew button ─────────────────────────────────────────
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton.icon(
+                  onPressed: () {},
+                  icon: const Icon(Icons.refresh_outlined, size: 20),
+                  label: Text(l10n.paySubscription),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
+                    textStyle: const TextStyle(
+                        fontWeight: FontWeight.w600, fontSize: 15),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 32),
+
+              // ── Payments section (coming soon) ───────────────────────
+              Padding(
+                padding: const EdgeInsets.only(left: 4, bottom: 12),
+                child: Text(
+                  l10n.payments.toUpperCase(),
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.8,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SubInfoRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color? valueColor;
+
+  const _SubInfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.valueColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+      child: Row(
+        children: [
+          Icon(icon,
+              size: 20,
+              color: theme.colorScheme.onSurfaceVariant),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Text(
+              label,
+              style: theme.textTheme.bodyMedium,
+            ),
+          ),
+          Text(
+            value,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: valueColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // ─── About app page ───────────────────────────────────────────────────────────

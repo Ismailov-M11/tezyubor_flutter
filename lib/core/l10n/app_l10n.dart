@@ -172,6 +172,10 @@ class AppL10n {
   String get subscriptionActive => _t('Активна', 'Faol', 'Active');
   String get subscriptionExpired => _t('Истекла', 'Tugagan', 'Expired');
   String get daysLeft => _t('дн. осталось', 'kun qoldi', 'days left');
+  String get payments => _t('Платежи', "To'lovlar", 'Payments');
+  String get noPaymentsYet => _t('Платежей пока нет', "Hozircha to'lovlar yo'q", 'No payments yet');
+  String get subscriptionValidUntil => _t('Действует до', 'Amal qilish muddati', 'Valid until');
+  String get subscriptionExpiringSoon => _t('Скоро истекает', 'Tez orada tugaydi', 'Expiring soon');
   String get logoutConfirm =>
       _t('Выйти из аккаунта?', 'Hisobdan chiqasizmi?', 'Log out?');
   String get storeNameLbl => _t("Название магазина", "Do'kon nomi", 'Store Name');

@@ -866,36 +866,37 @@ class _AboutAppPage extends StatelessWidget {
           title: Text(l10n.aboutApp),
         ),
         body: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              children: [
-                const Spacer(),
-                Container(
-                  width: 88,
-                  height: 88,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(24, 32, 24, 32),
+            children: [
+              Center(
+                child: Container(
+                  width: 120,
+                  height: 120,
                   decoration: BoxDecoration(
                     color: AppColors.primary
                         .withValues(alpha: isDark ? 0.12 : 0.08),
-                    borderRadius: BorderRadius.circular(24),
+                    borderRadius: BorderRadius.circular(32),
                     border: Border.all(
                         color: AppColors.primary.withValues(alpha: 0.2)),
                   ),
                   child: Center(
                     child: SvgPicture.asset(
                       'assets/images/logo.svg',
-                      width: 52,
-                      height: 52,
+                      width: 72,
+                      height: 72,
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
-                RichText(
+              ),
+              const SizedBox(height: 20),
+              Center(
+                child: RichText(
                   text: TextSpan(
                     style: const TextStyle(
-                      fontSize: 30,
+                      fontSize: 40,
                       fontWeight: FontWeight.w800,
-                      letterSpacing: -1.2,
+                      letterSpacing: -1.5,
                     ),
                     children: [
                       TextSpan(
@@ -913,24 +914,25 @@ class _AboutAppPage extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(height: 6),
-                Text('v1.0.0',
+              ),
+              const SizedBox(height: 6),
+              Center(
+                child: Text('v1.0.0',
                     style: Theme.of(context).textTheme.bodySmall),
-                const Spacer(),
-                _LinkTile(
-                  icon: Icons.description_outlined,
-                  label: l10n.termsOfService,
-                  url: 'https://tezyubor.uz/$prefix/terms',
-                ),
-                const SizedBox(height: 10),
-                _LinkTile(
-                  icon: Icons.privacy_tip_outlined,
-                  label: l10n.privacyPolicy,
-                  url: 'https://tezyubor.uz/$prefix/privacy',
-                ),
-                const SizedBox(height: 32),
-              ],
-            ),
+              ),
+              const SizedBox(height: 32),
+              _LinkTile(
+                icon: Icons.description_outlined,
+                label: l10n.termsOfService,
+                url: 'https://tezyubor.uz/$prefix/terms',
+              ),
+              const SizedBox(height: 10),
+              _LinkTile(
+                icon: Icons.privacy_tip_outlined,
+                label: l10n.privacyPolicy,
+                url: 'https://tezyubor.uz/$prefix/privacy',
+              ),
+            ],
           ),
         ),
       ),

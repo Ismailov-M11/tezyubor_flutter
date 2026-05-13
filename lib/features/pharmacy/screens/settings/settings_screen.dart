@@ -13,6 +13,7 @@ import '../../../../shared/widgets/loading_overlay.dart';
 import '../../../auth/providers/auth_provider.dart';
 import '../../providers/pharmacy_provider.dart';
 import '../location/location_picker_screen.dart';
+import '../subscription_expired_modal.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -1126,7 +1127,12 @@ class _SubscriptionPage extends StatelessWidget {
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton.icon(
-                  onPressed: () {},
+                  onPressed: () => showDialog(
+                    context: context,
+                    barrierColor: Colors.transparent,
+                    barrierDismissible: false,
+                    builder: (_) => const SubscriptionExpiredModal(),
+                  ),
                   icon: const Icon(Icons.refresh_outlined, size: 20),
                   label: Text(l10n.paySubscription),
                   style: ElevatedButton.styleFrom(

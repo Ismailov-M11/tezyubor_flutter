@@ -154,6 +154,8 @@ class AppL10n {
       _t('Изменить пароль', "Parolni o'zgartirish", 'Change Password');
   String get subscription => _t('Подписка', 'Obuna', 'Subscription');
   String get aboutApp => _t('О приложении', 'Ilova haqida', 'About App');
+  String get termsOfService => _t('Условия использования', 'Foydalanish shartlari', 'Terms of Service');
+  String get privacyPolicy => _t('Политика конфиденциальности', 'Maxfiylik siyosati', 'Privacy Policy');
   String get appearance => _t('Внешний вид', "Ko'rinish", 'Appearance');
   String get account => _t('Аккаунт', 'Akkaunt', 'Account');
   String get application => _t('Приложение', 'Ilova', 'Application');

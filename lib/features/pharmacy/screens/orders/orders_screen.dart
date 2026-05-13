@@ -766,7 +766,6 @@ class _OrderDetailPage extends ConsumerWidget {
                       icon: Icons.location_on_outlined,
                       label: l10n.address,
                       value: order.customerAddress!,
-                      wrapValue: true,
                     ),
                   if (order.customerComment != null &&
                       order.customerComment!.isNotEmpty)
@@ -904,7 +903,6 @@ class _SheetRow extends StatelessWidget {
   final String value;
   final bool bold;
   final Color? valueColor;
-  final bool wrapValue;
 
   const _SheetRow({
     required this.icon,
@@ -912,7 +910,6 @@ class _SheetRow extends StatelessWidget {
     required this.value,
     this.bold = false,
     this.valueColor,
-    this.wrapValue = false,
   });
 
   @override
@@ -921,60 +918,40 @@ class _SheetRow extends StatelessWidget {
     final mutedFg = isDark
         ? AppColors.mutedForegroundDark
         : AppColors.mutedForegroundLight;
-    final fg =
-        isDark ? AppColors.foregroundDark : AppColors.foregroundLight;
-
-    if (wrapValue) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, size: 16, color: AppColors.primary),
-                const SizedBox(width: 12),
-                Text(label, style: TextStyle(fontSize: 13, color: mutedFg)),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Padding(
-              padding: const EdgeInsets.only(left: 28),
-              child: Text(
-                value,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
-                  color: valueColor ?? fg,
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
+    final fg = isDark ? AppColors.foregroundDark : AppColors.foregroundLight;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 16, color: AppColors.primary),
+          Padding(
+            padding: const EdgeInsets.only(top: 1),
+            child: Icon(icon, size: 16, color: AppColors.primary),
+          ),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(label,
-                style: TextStyle(fontSize: 13, color: mutedFg)),
-          ),
-          const SizedBox(width: 8),
-          Flexible(
-            child: Text(
-              value,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
-                color: valueColor ?? fg,
-              ),
-              textAlign: TextAlign.end,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: mutedFg,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
+                    color: valueColor ?? fg,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -996,33 +973,48 @@ class _SheetPhoneRow extends StatelessWidget {
     final mutedFg = isDark
         ? AppColors.mutedForegroundDark
         : AppColors.mutedForegroundLight;
-    return GestureDetector(
-      onTap: () async {
-        final uri = Uri(scheme: 'tel', path: phone);
-        if (await canLaunchUrl(uri)) await launchUrl(uri);
-      },
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-        child: Row(
-          children: [
-            const Icon(Icons.phone_outlined,
-                size: 16, color: AppColors.primary),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(l10n.phone,
-                  style: TextStyle(fontSize: 13, color: mutedFg)),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(top: 1),
+            child: Icon(Icons.phone_outlined, size: 16, color: AppColors.primary),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.phone,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: mutedFg,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                GestureDetector(
+                  onTap: () async {
+                    final uri = Uri(scheme: 'tel', path: phone);
+                    if (await canLaunchUrl(uri)) await launchUrl(uri);
+                  },
+                  child: Text(
+                    phone,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primary,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            Text(
-              phone,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppColors.primary,
-                decoration: TextDecoration.underline,
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

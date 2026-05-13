@@ -19,7 +19,8 @@ class PharmacyClient {
         id: json['id']?.toString() ?? '',
         phone: json['phone'] as String? ?? '',
         name: json['name'] as String?,
-        lastAddress: json['lastAddress'] as String?,
+        lastAddress: (json['addresses'] as List?)?.whereType<String>().firstOrNull
+            ?? json['lastAddress'] as String?,
         ordersCount: (json['ordersCount'] as num?)?.toInt() ?? 0,
         lastOrderAt: json['lastOrderAt'] as String?,
       );

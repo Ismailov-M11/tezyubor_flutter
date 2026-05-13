@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/l10n/app_l10n.dart';
 import '../../../../core/network/api_client.dart';
@@ -107,7 +109,7 @@ class SettingsScreen extends ConsumerWidget {
                       icon: Icons.info_outline,
                       title: l10n.aboutApp,
                       subtitle: 'tezyubor v1.0.0',
-                      onTap: () {},
+                      onTap: () => pushRightPanel(context, const _AboutAppPage()),
                     ),
                   ],
                 ),
@@ -843,4 +845,152 @@ class _SuccessBanner extends StatelessWidget {
         child: Text(message,
             style: const TextStyle(color: AppColors.success)),
       );
+}
+
+// ─── About app page ───────────────────────────────────────────────────────────
+
+class _AboutAppPage extends StatelessWidget {
+  const _AboutAppPage();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final lang = Localizations.localeOf(context).languageCode;
+    final prefix = switch (lang) { 'uz' => 'uz', 'en' => 'en', _ => 'ru' };
+
+    return SwipeToDismiss(
+      child: Scaffold(
+        appBar: AppBar(
+          leading: const PanelBackButton(),
+          title: Text(l10n.aboutApp),
+        ),
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
+              children: [
+                const Spacer(),
+                Container(
+                  width: 88,
+                  height: 88,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary
+                        .withValues(alpha: isDark ? 0.12 : 0.08),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                        color: AppColors.primary.withValues(alpha: 0.2)),
+                  ),
+                  child: Center(
+                    child: SvgPicture.asset(
+                      'assets/images/logo.svg',
+                      width: 52,
+                      height: 52,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                RichText(
+                  text: TextSpan(
+                    style: const TextStyle(
+                      fontSize: 30,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -1.2,
+                    ),
+                    children: [
+                      TextSpan(
+                        text: 'tez',
+                        style: TextStyle(
+                          color: isDark
+                              ? AppColors.foregroundDark
+                              : AppColors.foregroundLight,
+                        ),
+                      ),
+                      const TextSpan(
+                        text: 'yubor',
+                        style: TextStyle(color: AppColors.primary),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text('v1.0.0',
+                    style: Theme.of(context).textTheme.bodySmall),
+                const Spacer(),
+                _LinkTile(
+                  icon: Icons.description_outlined,
+                  label: l10n.termsOfService,
+                  url: 'https://tezyubor.uz/$prefix/terms',
+                ),
+                const SizedBox(height: 10),
+                _LinkTile(
+                  icon: Icons.privacy_tip_outlined,
+                  label: l10n.privacyPolicy,
+                  url: 'https://tezyubor.uz/$prefix/privacy',
+                ),
+                const SizedBox(height: 32),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LinkTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String url;
+
+  const _LinkTile({
+    required this.icon,
+    required this.label,
+    required this.url,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Material(
+      color: isDark ? AppColors.cardDark : Colors.white,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () async {
+          final uri = Uri.tryParse(url);
+          if (uri != null) await launchUrl(uri, mode: LaunchMode.inAppWebView);
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isDark ? AppColors.borderDark : AppColors.borderLight,
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, size: 20, color: AppColors.primary),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodyMedium
+                      ?.copyWith(fontWeight: FontWeight.w500),
+                ),
+              ),
+              Icon(
+                Icons.chevron_right,
+                size: 18,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

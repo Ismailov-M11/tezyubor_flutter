@@ -273,16 +273,8 @@ class _ClientDetailPage extends StatelessWidget {
         ? client.name![0].toUpperCase()
         : (client.phone.isNotEmpty ? client.phone[0] : '?');
 
-    String? formattedLastOrder;
-    if (client.lastOrderAt != null) {
-      try {
-        final dt = DateTime.parse(client.lastOrderAt!).toLocal();
-        formattedLastOrder =
-            '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}';
-      } catch (_) {
-        formattedLastOrder = client.lastOrderAt;
-      }
-    }
+    final formattedLastOrder =
+        client.lastOrderAt != null ? l10n.fmtDate(client.lastOrderAt!) : null;
 
     return SwipeToDismiss(
       child: Scaffold(
@@ -428,8 +420,6 @@ class _ClientFilterPageState extends State<_ClientFilterPage> {
     if (picked != null) setState(() => isFrom ? _dateFrom = picked : _dateTo = picked);
   }
 
-  String _fmtDate(DateTime dt) =>
-      '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}';
 
   @override
   Widget build(BuildContext context) {
@@ -487,7 +477,7 @@ class _ClientFilterPageState extends State<_ClientFilterPage> {
               children: [
                 Expanded(
                   child: _DateButton(
-                    label: _dateFrom != null ? _fmtDate(_dateFrom!) : l10n.from,
+                    label: _dateFrom != null ? l10n.fmtDateDt(_dateFrom!) : l10n.from,
                     isSet: _dateFrom != null,
                     onTap: () => _pickDate(true),
                     onClear: _dateFrom != null
@@ -498,7 +488,7 @@ class _ClientFilterPageState extends State<_ClientFilterPage> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: _DateButton(
-                    label: _dateTo != null ? _fmtDate(_dateTo!) : l10n.to,
+                    label: _dateTo != null ? l10n.fmtDateDt(_dateTo!) : l10n.to,
                     isSet: _dateTo != null,
                     onTap: () => _pickDate(false),
                     onClear: _dateTo != null

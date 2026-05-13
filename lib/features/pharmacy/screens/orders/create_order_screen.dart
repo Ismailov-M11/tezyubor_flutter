@@ -157,6 +157,40 @@ class _CreateOrderSheetState extends ConsumerState<CreateOrderSheet> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // КЛИЕНТ section
+                      const _SectionLabel('КЛИЕНТ'),
+                      const SizedBox(height: 8),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: cardBg,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: borderColor),
+                        ),
+                        child: Column(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+                              child: CustomTextField(
+                                label: l10n.customer,
+                                controller: _nameController,
+                                prefixIcon: const Icon(Icons.person_outline),
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+                              child: CustomTextField(
+                                label: l10n.phone,
+                                controller: _phoneController,
+                                keyboardType: TextInputType.phone,
+                                prefixIcon: const Icon(Icons.phone_outlined),
+                                inputFormatters: [UzPhoneFormatter()],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
                       // ЗАКАЗ section
                       const _SectionLabel('ЗАКАЗ'),
                       const SizedBox(height: 8),
@@ -199,40 +233,6 @@ class _CreateOrderSheetState extends ConsumerState<CreateOrderSheet> {
                                   }
                                   return null;
                                 },
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // КЛИЕНТ section
-                      const _SectionLabel('КЛИЕНТ'),
-                      const SizedBox(height: 8),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: cardBg,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: borderColor),
-                        ),
-                        child: Column(
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-                              child: CustomTextField(
-                                label: l10n.customer,
-                                controller: _nameController,
-                                prefixIcon: const Icon(Icons.person_outline),
-                              ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
-                              child: CustomTextField(
-                                label: l10n.phone,
-                                controller: _phoneController,
-                                keyboardType: TextInputType.phone,
-                                prefixIcon: const Icon(Icons.phone_outlined),
-                                inputFormatters: [UzPhoneFormatter()],
                               ),
                             ),
                           ],

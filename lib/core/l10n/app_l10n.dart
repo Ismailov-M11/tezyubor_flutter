@@ -403,6 +403,80 @@ class AppL10n {
   String get permAnalyticsView => _t('Просмотр аналитики', 'Analitikani ko\'rish', 'View analytics');
   String get permActivationsView => _t('Просмотр активаций', 'Aktivatsiyalarni ko\'rish', 'View activations');
 
+  // ─── Date formatting ──────────────────────────────────────────────────────
+
+  String _monthFull(int m) => switch (m) {
+        1  => _t('января',   'yanvar',  'January'),
+        2  => _t('февраля',  'fevral',  'February'),
+        3  => _t('марта',    'mart',    'March'),
+        4  => _t('апреля',   'aprel',   'April'),
+        5  => _t('мая',      'may',     'May'),
+        6  => _t('июня',     'iyun',    'June'),
+        7  => _t('июля',     'iyul',    'July'),
+        8  => _t('августа',  'avgust',  'August'),
+        9  => _t('сентября', 'sentabr', 'September'),
+        10 => _t('октября',  'oktabr',  'October'),
+        11 => _t('ноября',   'noyabr',  'November'),
+        _  => _t('декабря',  'dekabr',  'December'),
+      };
+
+  String _monthShort(int m) => switch (m) {
+        1  => _t('янв', 'yan', 'Jan'),
+        2  => _t('фев', 'fev', 'Feb'),
+        3  => _t('мар', 'mar', 'Mar'),
+        4  => _t('апр', 'apr', 'Apr'),
+        5  => _t('мая', 'may', 'May'),
+        6  => _t('июн', 'iyn', 'Jun'),
+        7  => _t('июл', 'iyl', 'Jul'),
+        8  => _t('авг', 'avg', 'Aug'),
+        9  => _t('сен', 'sen', 'Sep'),
+        10 => _t('окт', 'okt', 'Oct'),
+        11 => _t('ноя', 'noy', 'Nov'),
+        _  => _t('дек', 'dek', 'Dec'),
+      };
+
+  /// "13 мая 2026  13:05"
+  String fmtDateTime(String iso) {
+    try {
+      final dt = DateTime.parse(iso).toLocal();
+      final h = dt.hour.toString().padLeft(2, '0');
+      final min = dt.minute.toString().padLeft(2, '0');
+      return '${dt.day} ${_monthFull(dt.month)} ${dt.year}  $h:$min';
+    } catch (_) {
+      return iso;
+    }
+  }
+
+  /// "13 мая  13:05" (без года, для карточек)
+  String fmtDateTimeShort(String iso) {
+    try {
+      final dt = DateTime.parse(iso).toLocal();
+      final h = dt.hour.toString().padLeft(2, '0');
+      final min = dt.minute.toString().padLeft(2, '0');
+      return '${dt.day} ${_monthShort(dt.month)}  $h:$min';
+    } catch (_) {
+      return iso;
+    }
+  }
+
+  /// "13 мая 2026" (только дата, из ISO-строки)
+  String fmtDate(String iso) {
+    try {
+      final dt = DateTime.parse(iso).toLocal();
+      return '${dt.day} ${_monthFull(dt.month)} ${dt.year}';
+    } catch (_) {
+      return iso;
+    }
+  }
+
+  /// "13 мая 2026" (только дата, из DateTime)
+  String fmtDateDt(DateTime dt) =>
+      '${dt.day} ${_monthFull(dt.month)} ${dt.year}';
+
+  /// "13 мая" (день + краткий месяц, для чипов фильтра)
+  String fmtDateShort(DateTime dt) =>
+      '${dt.day} ${_monthShort(dt.month)}';
+
   String permissionLabel(String perm) => switch (perm) {
     'orders:view'       => permOrdersView,
     'orders:create'     => permOrdersCreate,

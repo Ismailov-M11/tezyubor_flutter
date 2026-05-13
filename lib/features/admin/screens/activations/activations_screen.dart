@@ -314,25 +314,10 @@ class _ActivationCard extends StatelessWidget {
     final theme = Theme.of(context);
     final a = activation;
 
-    String? expiryLabel;
-    if (a.subscriptionExpiry != null) {
-      try {
-        final dt = DateTime.parse(a.subscriptionExpiry!).toLocal();
-        expiryLabel =
-            '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}';
-      } catch (_) {
-        expiryLabel = a.subscriptionExpiry;
-      }
-    }
-
-    var dateLabel = '';
-    try {
-      final dt = DateTime.parse(a.createdAt).toLocal();
-      dateLabel =
-          '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}';
-    } catch (_) {
-      dateLabel = a.createdAt;
-    }
+    final expiryLabel = a.subscriptionExpiry != null
+        ? l10n.fmtDate(a.subscriptionExpiry!)
+        : null;
+    final dateLabel = l10n.fmtDate(a.createdAt);
 
     return Card(
       child: InkWell(
@@ -521,15 +506,6 @@ class _ActivationDetailPage extends StatelessWidget {
     required this.onReassign,
   });
 
-  String _fmt(String iso) {
-    try {
-      final dt = DateTime.parse(iso).toLocal();
-      return '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}';
-    } catch (_) {
-      return iso;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -569,12 +545,12 @@ class _ActivationDetailPage extends StatelessWidget {
             _DetailRow(
                 icon: Icons.calendar_today_outlined,
                 label: l10n.adminActivationDateAdded,
-                value: _fmt(a.createdAt)),
+                value: l10n.fmtDate(a.createdAt)),
             if (a.subscriptionExpiry != null)
               _DetailRow(
                   icon: Icons.event_outlined,
                   label: 'Подписка до',
-                  value: _fmt(a.subscriptionExpiry!)),
+                  value: l10n.fmtDate(a.subscriptionExpiry!)),
             const SizedBox(height: 16),
             const Divider(height: 1),
             const SizedBox(height: 16),
@@ -852,9 +828,6 @@ class _ActivationFilterSheetState extends State<_ActivationFilterSheet> {
     }
   }
 
-  String _fmtDate(DateTime dt) =>
-      '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}';
-
   int get _activeCount {
     int c = 0;
     if (_creatorType != null) c++;
@@ -993,7 +966,7 @@ class _ActivationFilterSheetState extends State<_ActivationFilterSheet> {
               Expanded(
                 child: _DateBtn(
                   label:
-                      _dateFrom != null ? _fmtDate(_dateFrom!) : l10n.from,
+                      _dateFrom != null ? l10n.fmtDateDt(_dateFrom!) : l10n.from,
                   isSet: _dateFrom != null,
                   onTap: () => _pickDate(true),
                   onClear: _dateFrom != null
@@ -1004,7 +977,7 @@ class _ActivationFilterSheetState extends State<_ActivationFilterSheet> {
               const SizedBox(width: 8),
               Expanded(
                 child: _DateBtn(
-                  label: _dateTo != null ? _fmtDate(_dateTo!) : l10n.to,
+                  label: _dateTo != null ? l10n.fmtDateDt(_dateTo!) : l10n.to,
                   isSet: _dateTo != null,
                   onTap: () => _pickDate(false),
                   onClear: _dateTo != null

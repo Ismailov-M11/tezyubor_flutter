@@ -29,23 +29,8 @@ String _fmtAmount(double? v) {
   return '${buf.toString()} сум';
 }
 
-String _fmtDate(String iso) {
-  try {
-    final dt = DateTime.parse(iso).toLocal();
-    return '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}  ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-  } catch (_) {
-    return iso;
-  }
-}
-
-String _fmtDateShort(String iso) {
-  try {
-    final dt = DateTime.parse(iso).toLocal();
-    return '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-  } catch (_) {
-    return iso;
-  }
-}
+String _fmtDate(String iso, AppL10n l10n) => l10n.fmtDateTime(iso);
+String _fmtDateShort(String iso, AppL10n l10n) => l10n.fmtDateTimeShort(iso);
 
 const _statusOrder = [
   'pending',
@@ -368,9 +353,9 @@ class _ActiveFilterRow extends StatelessWidget {
                   _FilterChip(
                     label: [
                       if (filter.dateFrom != null)
-                        '${l10n.from} ${_fmtShort(filter.dateFrom!)}',
+                        '${l10n.from} ${l10n.fmtDateShort(filter.dateFrom!)}',
                       if (filter.dateTo != null)
-                        '${l10n.to} ${_fmtShort(filter.dateTo!)}',
+                        '${l10n.to} ${l10n.fmtDateShort(filter.dateTo!)}',
                     ].join(' '),
                     color: AppColors.primary,
                   ),
@@ -387,8 +372,6 @@ class _ActiveFilterRow extends StatelessWidget {
     );
   }
 
-  String _fmtShort(DateTime dt) =>
-      '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}';
 }
 
 class _FilterChip extends StatelessWidget {
@@ -538,7 +521,7 @@ class _OrderCard extends ConsumerWidget {
                               size: 12, color: mutedFg),
                           const SizedBox(width: 4),
                           Text(
-                            _fmtDateShort(order.createdAt),
+                            _fmtDateShort(order.createdAt, l10n),
                             style:
                                 TextStyle(fontSize: 11, color: mutedFg),
                           ),
@@ -712,7 +695,7 @@ class _OrderDetailPage extends ConsumerWidget {
                 ),
               ),
               Text(
-                _fmtDate(order.createdAt),
+                _fmtDate(order.createdAt, l10n),
                 style: TextStyle(fontSize: 11, color: mutedFg),
               ),
             ],
@@ -1400,7 +1383,7 @@ class _OrderFilterSheetState extends State<_OrderFilterSheet> {
                 child: OutlinedButton.icon(
                   icon: const Icon(Icons.calendar_today, size: 15),
                   label: Text(
-                    _dateFrom != null ? _fmt(_dateFrom!) : l10n.from,
+                    _dateFrom != null ? l10n.fmtDateDt(_dateFrom!) : l10n.from,
                     style: const TextStyle(fontSize: 13),
                   ),
                   onPressed: () => _pickDate(true),
@@ -1411,7 +1394,7 @@ class _OrderFilterSheetState extends State<_OrderFilterSheet> {
                 child: OutlinedButton.icon(
                   icon: const Icon(Icons.calendar_today, size: 15),
                   label: Text(
-                    _dateTo != null ? _fmt(_dateTo!) : l10n.to,
+                    _dateTo != null ? l10n.fmtDateDt(_dateTo!) : l10n.to,
                     style: const TextStyle(fontSize: 13),
                   ),
                   onPressed: () => _pickDate(false),
@@ -1454,8 +1437,6 @@ class _OrderFilterSheetState extends State<_OrderFilterSheet> {
     );
   }
 
-  String _fmt(DateTime dt) =>
-      '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}';
 }
 
 class _ToggleChip extends StatelessWidget {

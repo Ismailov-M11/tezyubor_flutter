@@ -235,6 +235,23 @@ class _DailyOrdersChart extends StatelessWidget {
           height: 180,
           child: BarChart(
             BarChartData(
+              barTouchData: BarTouchData(
+                touchTooltipData: BarTouchTooltipData(
+                  getTooltipColor: (_) =>
+                      Theme.of(context).colorScheme.inverseSurface,
+                  tooltipBorder: BorderSide.none,
+                  getTooltipItem: (group, groupIndex, rod, rodIndex) =>
+                      BarTooltipItem(
+                    rod.toY.toInt().toString(),
+                    TextStyle(
+                      color:
+                          Theme.of(context).colorScheme.onInverseSurface,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ),
               maxY: (maxY * 1.2).ceilToDouble(),
               barGroups: last14.asMap().entries.map((e) {
                 return BarChartGroupData(

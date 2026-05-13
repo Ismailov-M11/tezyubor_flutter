@@ -375,7 +375,7 @@ class _AdminOrderFilterSheetState extends State<_AdminOrderFilterSheet> {
                 child: OutlinedButton.icon(
                   icon: const Icon(Icons.calendar_today, size: 15),
                   label: Text(
-                    _dateFrom != null ? _fmt(_dateFrom!) : l10n.from,
+                    _dateFrom != null ? l10n.fmtDateDt(_dateFrom!) : l10n.from,
                     style: const TextStyle(fontSize: 13),
                   ),
                   onPressed: () => _pickDate(true),
@@ -386,7 +386,7 @@ class _AdminOrderFilterSheetState extends State<_AdminOrderFilterSheet> {
                 child: OutlinedButton.icon(
                   icon: const Icon(Icons.calendar_today, size: 15),
                   label: Text(
-                    _dateTo != null ? _fmt(_dateTo!) : l10n.to,
+                    _dateTo != null ? l10n.fmtDateDt(_dateTo!) : l10n.to,
                     style: const TextStyle(fontSize: 13),
                   ),
                   onPressed: () => _pickDate(false),
@@ -428,8 +428,6 @@ class _AdminOrderFilterSheetState extends State<_AdminOrderFilterSheet> {
     );
   }
 
-  String _fmt(DateTime dt) =>
-      '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}';
 }
 
 // ─── Create order sheet ───────────────────────────────────────────────────────
@@ -985,7 +983,7 @@ class _AdminOrderCard extends ConsumerWidget {
                         children: [
                           _CardInfoRow(
                               icon: Icons.access_time,
-                              value: _formatDate(order.createdAt),
+                              value: l10n.fmtDate(order.createdAt),
                               theme: theme),
                           const Spacer(),
                           Container(
@@ -1072,15 +1070,6 @@ class _AdminOrderCard extends ConsumerWidget {
     );
   }
 
-  String _formatDate(String iso) {
-    try {
-      final dt = DateTime.parse(iso).toLocal();
-      return '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}';
-    } catch (_) {
-      return iso;
-    }
-  }
-
   Future<void> _confirmOrder(BuildContext context, WidgetRef ref) async {
     final ok = await ref
         .read(adminOrdersProvider.notifier)
@@ -1159,7 +1148,7 @@ class _AdminOrderDetailPage extends ConsumerWidget {
                 ),
               ),
               Text(
-                _fmtDate(order.createdAt),
+                l10n.fmtDateTime(order.createdAt),
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -1421,14 +1410,6 @@ class _AdminOrderDetailPage extends ConsumerWidget {
     );
   }
 
-  String _fmtDate(String iso) {
-    try {
-      final dt = DateTime.parse(iso).toLocal();
-      return '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}  ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-    } catch (_) {
-      return iso;
-    }
-  }
 }
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────

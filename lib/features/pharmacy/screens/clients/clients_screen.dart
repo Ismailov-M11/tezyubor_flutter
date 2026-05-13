@@ -296,7 +296,7 @@ class _ClientDetailPage extends StatelessWidget {
                 if (client.lastOrderAt != null)
                   _StatChip(
                       icon: Icons.access_time,
-                      value: _fmtDate(client.lastOrderAt!),
+                      value: l10n.fmtDate(client.lastOrderAt!),
                       label: l10n.lastOrder),
               ],
             ),
@@ -332,14 +332,6 @@ class _ClientDetailPage extends StatelessWidget {
     );
   }
 
-  String _fmtDate(String iso) {
-    try {
-      final dt = DateTime.parse(iso).toLocal();
-      return '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}';
-    } catch (_) {
-      return iso;
-    }
-  }
 }
 
 class _StatChip extends StatelessWidget {
@@ -468,7 +460,7 @@ class _ClientFilterSheetState extends State<_ClientFilterSheet> {
                 child: OutlinedButton.icon(
                   icon: const Icon(Icons.calendar_today, size: 16),
                   label: Text(
-                      _dateFrom != null ? _fmt(_dateFrom!) : l10n.from,
+                      _dateFrom != null ? l10n.fmtDateDt(_dateFrom!) : l10n.from,
                       style: const TextStyle(fontSize: 13)),
                   onPressed: () => _pickDate(true),
                 ),
@@ -477,7 +469,7 @@ class _ClientFilterSheetState extends State<_ClientFilterSheet> {
               Expanded(
                 child: OutlinedButton.icon(
                   icon: const Icon(Icons.calendar_today, size: 16),
-                  label: Text(_dateTo != null ? _fmt(_dateTo!) : l10n.to,
+                  label: Text(_dateTo != null ? l10n.fmtDateDt(_dateTo!) : l10n.to,
                       style: const TextStyle(fontSize: 13)),
                   onPressed: () => _pickDate(false),
                 ),
@@ -518,6 +510,4 @@ class _ClientFilterSheetState extends State<_ClientFilterSheet> {
     );
   }
 
-  String _fmt(DateTime dt) =>
-      '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}';
 }

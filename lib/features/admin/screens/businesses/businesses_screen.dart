@@ -632,7 +632,7 @@ class _PharmacyDetailPage extends ConsumerWidget {
               _InfoRow(
                 icon: Icons.calendar_today,
                 label: l10n.adminBusinessSubExpiry,
-                value: _fmtDate(pharmacy.subscriptionExpiry!),
+                value: l10n.fmtDate(pharmacy.subscriptionExpiry!),
                 valueColor: isExpired
                     ? AppColors.error
                     : isExpiringSoon
@@ -721,14 +721,7 @@ class _PharmacyDetailPage extends ConsumerWidget {
     return dt.difference(DateTime.now()).inDays;
   }
 
-  String _fmtDate(String iso) {
-    try {
-      final dt = DateTime.parse(iso).toLocal();
-      return '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}';
-    } catch (_) {
-      return iso;
-    }
-  }
+
 }
 
 class _InfoRow extends StatelessWidget {
@@ -1039,7 +1032,7 @@ class _PharmacyFormPageState extends ConsumerState<_PharmacyFormPage> {
                     Expanded(
                       child: Text(
                         _expiryDate != null
-                            ? '${l10n.adminBusinessSubExpiry}: ${_expiryDate!.day.toString().padLeft(2, '0')}.${_expiryDate!.month.toString().padLeft(2, '0')}.${_expiryDate!.year}'
+                            ? '${l10n.adminBusinessSubExpiry}: ${l10n.fmtDateDt(_expiryDate!)}'
                             : l10n.adminBusinessSubExpiry,
                         style: TextStyle(
                           color: _expiryDate == null

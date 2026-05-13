@@ -13,7 +13,7 @@ import '../../../../shared/widgets/loading_overlay.dart';
 import '../../../auth/providers/auth_provider.dart';
 import '../../providers/pharmacy_provider.dart';
 import '../location/location_picker_screen.dart';
-import '../subscription_expired_modal.dart';
+import '../../providers/subscription_provider.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -1000,15 +1000,43 @@ class _SubscriptionCard extends StatelessWidget {
 
 // ─── Subscription page ────────────────────────────────────────────────────────
 
-class _SubscriptionPage extends StatelessWidget {
+class _SubscriptionPage extends ConsumerStatefulWidget {
   final dynamic profile;
   const _SubscriptionPage({required this.profile});
+
+  @override
+  ConsumerState<_SubscriptionPage> createState() => _SubscriptionPageState();
+}
+
+class _SubscriptionPageState extends ConsumerState<_SubscriptionPage> {
+  bool _isLoading = false;
+
+  Future<void> _pay() async {
+    setState(() => _isLoading = true);
+    final url =
+        await ref.read(subscriptionProvider.notifier).createPayment();
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+    if (url != null) {
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.inAppWebView);
+      }
+    } else {
+      final err = ref.read(subscriptionProvider).payError;
+      if (err != null && mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(err)));
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final profile = widget.profile;
 
     final days = profile?.daysUntilExpiry as int?;
     final expiry = profile?.subscriptionExpiry as String?;
@@ -1127,13 +1155,15 @@ class _SubscriptionPage extends StatelessWidget {
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton.icon(
-                  onPressed: () => showDialog(
-                    context: context,
-                    barrierColor: Colors.transparent,
-                    barrierDismissible: false,
-                    builder: (_) => const SubscriptionExpiredModal(),
-                  ),
-                  icon: const Icon(Icons.refresh_outlined, size: 20),
+                  onPressed: _isLoading ? null : _pay,
+                  icon: _isLoading
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Icon(Icons.refresh_outlined, size: 20),
                   label: Text(l10n.paySubscription),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,

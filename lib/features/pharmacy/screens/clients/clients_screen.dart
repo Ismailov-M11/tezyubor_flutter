@@ -20,6 +20,7 @@ class ClientsScreen extends ConsumerStatefulWidget {
 class _ClientsScreenState extends ConsumerState<ClientsScreen> {
   final _searchController = TextEditingController();
   Timer? _debounce;
+  bool _searchVisible = false;
 
   @override
   void dispose() {
@@ -30,13 +31,23 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
 
   void _onSearch(String value) {
     _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 500), () {
+    _debounce = Timer(const Duration(milliseconds: 400), () {
       final f = ref.read(clientsProvider).filter.copyWith(
             search: value,
             clearSearch: value.isEmpty,
           );
       ref.read(clientsProvider.notifier).applyFilter(f);
     });
+  }
+
+  void _toggleSearch() {
+    setState(() => _searchVisible = !_searchVisible);
+    if (!_searchVisible) {
+      _searchController.clear();
+      final f =
+          ref.read(clientsProvider).filter.copyWith(clearSearch: true);
+      ref.read(clientsProvider.notifier).applyFilter(f);
+    }
   }
 
   void _openFilter() {
@@ -70,51 +81,55 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
       appBar: AppBar(
         title: Text(l10n.clients),
         actions: [
+          IconButton(
+            icon: Icon(_searchVisible ? Icons.search_off : Icons.search),
+            onPressed: _toggleSearch,
+          ),
           Badge(
-            isLabelVisible: hasFilter &&
-                (state.filter.dateFrom != null ||
-                    state.filter.dateTo != null),
+            isLabelVisible: hasFilter,
             backgroundColor: AppColors.primary,
             child: IconButton(
-              icon: const Icon(Icons.filter_list),
+              icon: const Icon(Icons.tune_outlined),
               onPressed: _openFilter,
             ),
           ),
         ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(56),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: l10n.searchByPhone,
-                prefixIcon: const Icon(Icons.search, size: 20),
-                suffixIcon: _searchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear, size: 18),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() {});
-                          final f = ref
-                              .read(clientsProvider)
-                              .filter
-                              .copyWith(clearSearch: true);
-                          ref
-                              .read(clientsProvider.notifier)
-                              .applyFilter(f);
-                        },
-                      )
-                    : null,
-                isDense: true,
-              ),
-              onChanged: (v) {
-                setState(() {});
-                _onSearch(v);
-              },
-            ),
-          ),
-        ),
+        bottom: _searchVisible
+            ? PreferredSize(
+                preferredSize: const Size.fromHeight(52),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: TextField(
+                    controller: _searchController,
+                    autofocus: true,
+                    decoration: InputDecoration(
+                      hintText: l10n.searchByPhone,
+                      prefixIcon: const Icon(Icons.search, size: 20),
+                      isDense: true,
+                      suffixIcon: _searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.close, size: 18),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() {});
+                                ref.read(clientsProvider.notifier).applyFilter(
+                                      ref
+                                          .read(clientsProvider)
+                                          .filter
+                                          .copyWith(clearSearch: true),
+                                    );
+                              },
+                            )
+                          : null,
+                    ),
+                    onChanged: (v) {
+                      setState(() {});
+                      _onSearch(v);
+                    },
+                  ),
+                ),
+              )
+            : null,
       ),
       body: state.isLoading && state.clients.isEmpty
           ? const CenteredLoader()

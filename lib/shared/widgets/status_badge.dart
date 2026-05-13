@@ -10,7 +10,8 @@ class StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (color, text) = _resolve(status);
+    final color = colorFor(status);
+    final text = label ?? labelForL10n(status, context.l10n);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(
@@ -30,7 +31,7 @@ class StatusBadge extends StatelessWidget {
           ),
           const SizedBox(width: 5),
           Text(
-            label ?? text,
+            text,
             style: TextStyle(
               color: color,
               fontSize: 10.5,

@@ -9,6 +9,10 @@ import '../../../shared/widgets/custom_button.dart';
 import '../../../shared/widgets/custom_text_field.dart';
 import '../models/auth_models.dart';
 import '../providers/auth_provider.dart';
+import '../../pharmacy/providers/analytics_provider.dart';
+import '../../pharmacy/providers/clients_provider.dart';
+import '../../pharmacy/providers/orders_provider.dart';
+import '../../pharmacy/providers/pharmacy_provider.dart';
 
 class _LanguageSwitcher extends ConsumerWidget {
   const _LanguageSwitcher();
@@ -138,6 +142,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
 
     if (success && mounted) {
+      ref.invalidate(ordersProvider);
+      ref.invalidate(pharmacyProfileProvider);
+      ref.invalidate(clientsProvider);
+      ref.invalidate(analyticsProvider);
+
       final user = ref.read(authStateProvider).user;
       if (user?.role == UserRole.admin) {
         context.go('/admin/orders');

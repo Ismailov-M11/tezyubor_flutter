@@ -27,8 +27,13 @@ class SettingsScreen extends ConsumerWidget {
       appBar: AppBar(title: Text(l10n.profile)),
       body: profileState.isLoading && profile == null
           ? const CenteredLoader()
-          : ListView(
+          : RefreshIndicator(
+              onRefresh: () =>
+                  ref.read(pharmacyProfileProvider.notifier).load(),
+              color: AppColors.primary,
+              child: ListView(
               padding: const EdgeInsets.all(16),
+              physics: const AlwaysScrollableScrollPhysics(),
               children: [
                 // Profile card
                 if (profile != null) _ProfileCard(profile: profile),
@@ -126,6 +131,7 @@ class SettingsScreen extends ConsumerWidget {
                 ),
               ],
             ),
+          ),
     );
   }
 

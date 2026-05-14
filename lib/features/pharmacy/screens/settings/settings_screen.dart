@@ -509,10 +509,62 @@ class _EditProfilePageState extends State<_EditProfilePage> {
             ),
             const SizedBox(height: 20),
             CustomButton(label: l10n.save, isLoading: _isLoading, onPressed: _save),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: _isLoading ? null : () => _confirmDelete(context),
+              icon: const Icon(Icons.delete_outline, color: AppColors.error),
+              label: Text(
+                l10n.deleteProfile,
+                style: const TextStyle(color: AppColors.error),
+              ),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.error,
+                side: const BorderSide(color: AppColors.error),
+                minimumSize: const Size(double.infinity, 52),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14)),
+              ),
+            ),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _confirmDelete(BuildContext context) async {
+    final l10n = widget.l10n;
+    final messenger = ScaffoldMessenger.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.deleteProfile),
+        content: Text(l10n.deleteProfileConfirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            child: Text(l10n.deleteProfile),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _isLoading = true);
+    try {
+      await ApiClient.instance.delete('/pharmacy/me');
+      if (!mounted) return;
+      await widget.ref.read(authStateProvider.notifier).logout();
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.deleteProfileError)),
+      );
+    }
   }
 }
 

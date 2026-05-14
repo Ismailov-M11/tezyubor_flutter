@@ -69,6 +69,14 @@ class AppL10n {
 
   // Orders
   String get newOrder => _t('Новый заказ', 'Yangi buyurtma', 'New Order');
+  String get order => _t('Заказ', 'Buyurtma', 'Order');
+  String get deleteProfile => _t('Удалить профиль', 'Profilni o\'chirish', 'Delete Profile');
+  String get deleteProfileConfirm => _t(
+    'Это действие необратимо. Все данные вашего профиля, заказы и история будут удалены.',
+    'Bu amalni qaytarib bo\'lmaydi. Profilingiz, buyurtmalar va tarix o\'chiriladi.',
+    'This is irreversible. Your profile, orders and history will be permanently deleted.',
+  );
+  String get deleteProfileError => _t('Не удалось удалить профиль', 'Profilni o\'chirib bo\'lmadi', 'Failed to delete profile');
   String get createOrder => _t('Создать заказ', 'Buyurtma yaratish', 'Create Order');
   String get orderDetail =>
       _t('Детали заказа', 'Buyurtma tafsilotlari', 'Order Details');

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 /// Pushes [page] as a new route that slides in from the right.
-/// Swipe left closes it via the back arrow or gesture.
 Future<T?> pushRightPanel<T>(BuildContext context, Widget page) {
   return Navigator.of(context).push<T>(
     PageRouteBuilder<T>(
@@ -23,20 +22,84 @@ Future<T?> pushRightPanel<T>(BuildContext context, Widget page) {
   );
 }
 
-/// Wraps [child] with a horizontal swipe-left gesture that pops the route.
-class SwipeToDismiss extends StatelessWidget {
+/// Wraps [child] with an interactive swipe-left gesture that pops the route.
+/// Supports both slow (dragging) and fast swipes with visual feedback.
+class SwipeToDismiss extends StatefulWidget {
   final Widget child;
   const SwipeToDismiss({super.key, required this.child});
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
-        onHorizontalDragEnd: (d) {
-          if ((d.primaryVelocity ?? 0) < -300) {
-            Navigator.of(context).maybePop();
-          }
-        },
-        child: child,
-      );
+  State<SwipeToDismiss> createState() => _SwipeToDismissState();
+}
+
+class _SwipeToDismissState extends State<SwipeToDismiss>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _snapCtrl;
+  double _dragX = 0.0;
+  double _snapFrom = 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _snapCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 220),
+    );
+    _snapCtrl.addListener(() {
+      if (mounted) {
+        setState(() {
+          _dragX = _snapFrom * (1.0 - Curves.easeOutCubic.transform(_snapCtrl.value));
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _snapCtrl.dispose();
+    super.dispose();
+  }
+
+  void _onDragStart(DragStartDetails _) {
+    _snapCtrl.stop();
+    _snapCtrl.reset();
+  }
+
+  void _onDragUpdate(DragUpdateDetails d) {
+    final delta = d.delta.dx;
+    if (delta < 0 || _dragX < 0) {
+      setState(() {
+        _dragX = (_dragX + delta)
+            .clamp(-MediaQuery.of(context).size.width, 0.0);
+      });
+    }
+  }
+
+  void _onDragEnd(DragEndDetails d) {
+    final w = MediaQuery.of(context).size.width;
+    final v = d.primaryVelocity ?? 0;
+    if (v < -400 || _dragX < -(w * 0.35)) {
+      setState(() => _dragX = 0);
+      Navigator.of(context).maybePop();
+    } else {
+      _snapFrom = _dragX;
+      _snapCtrl.forward(from: 0);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onHorizontalDragStart: _onDragStart,
+      onHorizontalDragUpdate: _onDragUpdate,
+      onHorizontalDragEnd: _onDragEnd,
+      child: Transform.translate(
+        offset: Offset(_dragX, 0),
+        child: widget.child,
+      ),
+    );
+  }
 }
 
 /// Standard back button for right-panel pages.

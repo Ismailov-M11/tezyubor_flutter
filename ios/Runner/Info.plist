@@ -7,7 +7,11 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>TezyUbor</string>
+	<string>tezyubor</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Нужно для определения вашего местоположения на карте</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Нужно для определения вашего местоположения на карте</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>

@@ -158,7 +158,7 @@ class _CreateOrderSheetState extends ConsumerState<CreateOrderSheet> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // КЛИЕНТ section
-                      const _SectionLabel('КЛИЕНТ'),
+                      _SectionLabel(l10n.customer.toUpperCase()),
                       const SizedBox(height: 8),
                       Container(
                         decoration: BoxDecoration(
@@ -192,7 +192,7 @@ class _CreateOrderSheetState extends ConsumerState<CreateOrderSheet> {
                       const SizedBox(height: 16),
 
                       // ЗАКАЗ section
-                      const _SectionLabel('ЗАКАЗ'),
+                      _SectionLabel(l10n.order.toUpperCase()),
                       const SizedBox(height: 8),
                       Container(
                         decoration: BoxDecoration(
